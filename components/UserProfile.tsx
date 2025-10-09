@@ -1,0 +1,98 @@
+import React, { useState } from 'react';
+import { XIcon } from './icons';
+import type { User } from '@supabase/supabase-js';
+
+interface UserProfileProps {
+  user: User;
+  onSignOut: () => Promise<{ error: any }>;
+}
+
+const UserProfile: React.FC<UserProfileProps> = ({ user, onSignOut }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSignOut = async () => {
+    setLoading(true);
+    try {
+      await onSignOut();
+    } catch (error) {
+      console.error('Erro ao sair:', error);
+    } finally {
+      setLoading(false);
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <>
+      {/* Botão flutuante de perfil */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed top-4 right-4 z-30 w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold hover:bg-teal-400 transition-colors shadow-lg"
+        aria-label="Abrir perfil"
+      >
+        {user.email?.charAt(0).toUpperCase()}
+      </button>
+
+      {/* Modal de perfil */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4"
+          onClick={() => setIsOpen(false)}
+        >
+          <div
+            className="bg-slate-800 rounded-2xl w-full max-w-md p-6 border border-slate-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Perfil</h2>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <XIcon className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Avatar */}
+              <div className="flex flex-col items-center mb-4">
+                <div className="w-20 h-20 rounded-full bg-teal-500 flex items-center justify-center text-white text-3xl font-bold mb-2">
+                  {user.email?.charAt(0).toUpperCase()}
+                </div>
+                <p className="text-white font-medium">{user.user_metadata?.full_name || 'Usuário'}</p>
+                <p className="text-slate-400 text-sm">{user.email}</p>
+              </div>
+
+              {/* Informações */}
+              <div className="bg-slate-900/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">ID:</span>
+                  <span className="text-white text-xs font-mono">{user.id.slice(0, 8)}...</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Membro desde:</span>
+                  <span className="text-white text-sm">
+                    {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Botão de logout */}
+              <button
+                onClick={handleSignOut}
+                disabled={loading}
+                className="w-full bg-red-500 hover:bg-red-400 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? '⏳ Saindo...' : '🚪 Sair da Conta'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default UserProfile;
+

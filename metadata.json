@@ -1,0 +1,5 @@
+{
+  "name": "Rastreador de Hábitos",
+  "description": "Um aplicativo gamificado para rastrear seus hábitos, contar sequências e visualizar seu progresso com belos gráficos e um calendário. Totalmente em português do Brasil.",
+  "requestFramePermissions": []
+}
