@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Habit, Completion, View, Achievement } from './types';
 import { achievementsList } from './utils/achievements';
 import { useAuth } from './hooks/useAuth';
-import { useHybridData } from './hooks/useHybridData';
+import { useSupabaseData } from './hooks/useSupabaseData';
 import Auth from './components/Auth';
 import Header from './components/Header';
 import HabitList from './components/HabitList';
@@ -21,7 +21,6 @@ import DebugInfo from './components/DebugInfo';
 import PWAInstaller from './components/PWAInstaller';
 import SkeletonLoader from './components/SkeletonLoader';
 import Toast from './components/Toast';
-import OfflineStatus from './components/OfflineStatus';
 import { PlusIcon } from './components/icons';
 
 const App: React.FC = () => {
@@ -38,20 +37,18 @@ const App: React.FC = () => {
     // Autenticação
     const { user, loading: authLoading, error: authError, signIn, signUp, signOut } = useAuth();
     
-    // Dados híbridos (online + offline)
+    // Dados do Supabase (sempre chamado, mas pode retornar dados vazios se não há usuário)
     const {
         habits,
         completions,
         unlockedAchievements,
         loading: dataLoading,
         error: dataError,
-        isOnline,
         addHabit: addHabitToDb,
         deleteHabit: deleteHabitFromDb,
         toggleCompletion: toggleCompletionInDb,
         addAchievement: addAchievementToDb,
-        syncOfflineData,
-    } = useHybridData(user);
+    } = useSupabaseData(user);
 
     // Sistema de conquistas - SEMPRE chamado, mas só executa se há usuário
     useEffect(() => {
@@ -245,7 +242,6 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
                 isVisible={toast.visible}
                 onClose={() => setToast(prev => ({ ...prev, visible: false }))}
             />
-            <OfflineStatus isOnline={isOnline} />
             <UserProfile user={user} onSignOut={signOut} />
             <PWAInstaller />
             <BottomNav 
