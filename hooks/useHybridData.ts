@@ -77,16 +77,29 @@ export const useHybridData = (user: User | null): HybridDataResult => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
+    // Timeout de segurança para garantir que o loading termine
+    const loadingTimeout = setTimeout(() => {
+      if (!isInitialized) {
+        console.log('⏰ Timeout de loading - forçando inicialização');
+        setIsInitialized(true);
+        setOfflineError('Timeout de carregamento');
+      }
+    }, 10000); // 10 segundos
+    
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearTimeout(loadingTimeout);
     };
-  }, []);
+  }, [isInitialized]);
 
   // Carregar dados offline quando necessário
   useEffect(() => {
     if (!isOnline && user) {
       loadOfflineData();
+    } else if (!user) {
+      // Se não há usuário, marcar como inicializado
+      setIsInitialized(true);
     }
   }, [isOnline, user]);
 
@@ -341,12 +354,23 @@ export const useHybridData = (user: User | null): HybridDataResult => {
     }
   }, [isOnline, supabaseData]);
 
+  // Log de debug para estado de loading
+  const loadingState = !isInitialized || supabaseData.loading || isSyncing;
+  console.log('🔄 Loading state:', { 
+    isInitialized, 
+    supabaseLoading: supabaseData.loading, 
+    isSyncing, 
+    finalLoading: loadingState,
+    isOnline,
+    hasUser: !!user
+  });
+
   // Retornar dados baseados no status de conexão
   return {
     habits: isOnline ? supabaseData.habits : offlineData.habits,
     completions: isOnline ? supabaseData.completions : offlineData.completions,
     unlockedAchievements: isOnline ? supabaseData.unlockedAchievements : offlineData.unlockedAchievements,
-    loading: !isInitialized || supabaseData.loading || isSyncing,
+    loading: loadingState,
     error: supabaseData.error || offlineError,
     isOnline,
     addHabit,

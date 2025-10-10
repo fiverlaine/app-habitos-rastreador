@@ -30,6 +30,13 @@ export const useSupabaseData = (user: User | null) => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Verificar se está online
+      if (!navigator.onLine) {
+        console.log('📴 Offline - não carregando dados do Supabase');
+        setLoading(false);
+        return;
+      }
 
       // Carregar hábitos
       const { data: habitsData, error: habitsError } = await supabase

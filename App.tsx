@@ -219,9 +219,17 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
                                 <div className="w-6 h-6 border-2 border-teal-400 border-t-transparent rounded-full animate-spin"></div>
                                 <span className="text-lg font-medium">Carregando seus hábitos...</span>
                             </div>
-                            <p className="text-slate-400">
+                            <p className="text-slate-400 mb-4">
                                 {isOnline ? 'Sincronizando dados...' : 'Carregando dados offline...'}
                             </p>
+                            
+                            {/* Botão de emergência para pular loading */}
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="bg-orange-500 hover:bg-orange-400 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                            >
+                                🔄 Se travou, clique aqui
+                            </button>
                         </div>
                         
                         <SkeletonLoader variant="habit" count={3} />
