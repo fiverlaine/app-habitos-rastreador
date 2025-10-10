@@ -22,6 +22,7 @@ import PWAInstaller from './components/PWAInstaller';
 import SkeletonLoader from './components/SkeletonLoader';
 import Toast from './components/Toast';
 import OfflineStatus from './components/OfflineStatus';
+import OfflineFallback from './components/OfflineFallback';
 import { PlusIcon } from './components/icons';
 
 const App: React.FC = () => {
@@ -38,20 +39,21 @@ const App: React.FC = () => {
     // Autenticação
     const { user, loading: authLoading, error: authError, signIn, signUp, signOut } = useAuth();
     
-    // Dados híbridos (online + offline)
+    // Dados híbridos (online + offline) - só chama se há usuário
+    const hybridData = useHybridData(user);
     const {
-        habits,
-        completions,
-        unlockedAchievements,
-        loading: dataLoading,
-        error: dataError,
-        isOnline,
+        habits = [],
+        completions = [],
+        unlockedAchievements = new Set(),
+        loading: dataLoading = false,
+        error: dataError = null,
+        isOnline = navigator.onLine,
         addHabit: addHabitToDb,
         deleteHabit: deleteHabitFromDb,
         toggleCompletion: toggleCompletionInDb,
         addAchievement: addAchievementToDb,
         syncOfflineData,
-    } = useHybridData(user);
+    } = hybridData || {};
 
     // Sistema de conquistas - SEMPRE chamado, mas só executa se há usuário
     useEffect(() => {
@@ -183,7 +185,9 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
                                 <div className="w-6 h-6 border-2 border-teal-400 border-t-transparent rounded-full animate-spin"></div>
                                 <span className="text-lg font-medium">Carregando seus hábitos...</span>
                             </div>
-                            <p className="text-slate-400">Preparando tudo para você</p>
+                            <p className="text-slate-400">
+                                {isOnline ? 'Sincronizando dados...' : 'Carregando dados offline...'}
+                            </p>
                         </div>
                         
                         <SkeletonLoader variant="habit" count={3} />
@@ -192,6 +196,11 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
                 </div>
             </div>
         );
+    }
+
+    // Se está offline e não há dados, mostrar fallback
+    if (!isOnline && !user && habits.length === 0) {
+        return <OfflineFallback isOnline={isOnline} hasData={habits.length > 0} />;
     }
 
     const renderView = () => {

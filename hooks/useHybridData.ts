@@ -28,6 +28,7 @@ export const useHybridData = (user: User | null): HybridDataResult => {
   });
   const [pendingOperations, setPendingOperations] = useState<PendingOperation[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [offlineError, setOfflineError] = useState<string | null>(null);
 
   const supabaseData = useSupabaseData(user);
   const offlineStorage = OfflineStorage.getInstance();
@@ -70,18 +71,23 @@ export const useHybridData = (user: User | null): HybridDataResult => {
   }, [user]);
 
   const loadOfflineData = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('⚠️ Sem usuário - não carregando dados offline');
+      return;
+    }
     
     try {
+      setOfflineError(null);
       const data = await offlineStorage.getAllOfflineData(user.id);
       setOfflineData({
         habits: data.habits,
         completions: data.completions,
         unlockedAchievements: new Set(data.achievements.map(a => a.achievement_id))
       });
-      console.log('📱 Dados offline carregados');
+      console.log('📱 Dados offline carregados:', data.habits.length, 'hábitos');
     } catch (error) {
       console.error('❌ Erro ao carregar dados offline:', error);
+      setOfflineError('Erro ao carregar dados offline');
     }
   };
 
@@ -304,7 +310,7 @@ export const useHybridData = (user: User | null): HybridDataResult => {
     completions: isOnline ? supabaseData.completions : offlineData.completions,
     unlockedAchievements: isOnline ? supabaseData.unlockedAchievements : offlineData.unlockedAchievements,
     loading: supabaseData.loading || isSyncing,
-    error: supabaseData.error,
+    error: supabaseData.error || offlineError,
     isOnline,
     addHabit,
     deleteHabit,
