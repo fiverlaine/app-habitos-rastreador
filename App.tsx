@@ -22,68 +22,36 @@ import PWAInstaller from './components/PWAInstaller';
 import SkeletonLoader from './components/SkeletonLoader';
 import Toast from './components/Toast';
 import OfflineStatus from './components/OfflineStatus';
-import OfflineFallback from './components/OfflineFallback';
-import DebugPanel from './components/DebugPanel';
-import DiagnosticScreen from './components/DiagnosticScreen';
-import ErrorBoundary from './components/ErrorBoundary';
 import { PlusIcon } from './components/icons';
 
 const App: React.FC = () => {
-    try {
-        // SEMPRE chamar hooks na mesma ordem
-        const [isModalOpen, setIsModalOpen] = useState(false);
-        const [currentView, setCurrentView] = useState<View>('dashboard');
-        const [toastAchievement, setToastAchievement] = useState<Achievement | null>(null);
-        const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info'; visible: boolean }>({
-            message: '',
-            type: 'info',
-            visible: false
-        });
-        const [showDebug, setShowDebug] = useState(false);
-        const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
-    
-    // Debug: Log inicial
-    console.log('🚀 App iniciando...');
+    // SEMPRE chamar hooks na mesma ordem
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentView, setCurrentView] = useState<View>('dashboard');
+    const [toastAchievement, setToastAchievement] = useState<Achievement | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info'; visible: boolean }>({
+        message: '',
+        type: 'info',
+        visible: false
+    });
     
     // Autenticação
     const { user, loading: authLoading, error: authError, signIn, signUp, signOut } = useAuth();
     
-    // Debug: Log de autenticação
-    console.log('🔐 Auth state:', { user: !!user, loading: authLoading, error: authError });
-    
-    // Dados híbridos (online + offline) - só chama se há usuário
-    const hybridData = useHybridData(user);
+    // Dados híbridos (online + offline)
     const {
-        habits = [],
-        completions = [],
-        unlockedAchievements = new Set(),
-        loading: dataLoading = false,
-        error: dataError = null,
-        isOnline = navigator.onLine,
+        habits,
+        completions,
+        unlockedAchievements,
+        loading: dataLoading,
+        error: dataError,
+        isOnline,
         addHabit: addHabitToDb,
         deleteHabit: deleteHabitFromDb,
         toggleCompletion: toggleCompletionInDb,
         addAchievement: addAchievementToDb,
         syncOfflineData,
-    } = hybridData || {};
-    
-    // Debug: Log de dados híbridos
-    console.log('📊 Hybrid data state:', { 
-        habitsCount: habits.length, 
-        loading: dataLoading, 
-        error: dataError, 
-        isOnline 
-    });
-
-    // Verificar Service Worker
-    useEffect(() => {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(() => {
-                setServiceWorkerReady(true);
-                console.log('✅ Service Worker pronto');
-            });
-        }
-    }, []);
+    } = useHybridData(user);
 
     // Sistema de conquistas - SEMPRE chamado, mas só executa se há usuário
     useEffect(() => {
@@ -175,7 +143,6 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
 
     // Se não estiver autenticado, mostrar tela de login
     if (authLoading) {
-        console.log('⏳ Auth loading...');
         return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center">
                 <div className="text-white text-2xl">⏳ Carregando...</div>
@@ -184,13 +151,11 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
     }
 
     if (!user) {
-        console.log('👤 Sem usuário - mostrando tela de login');
         return <Auth onSignIn={signIn} onSignUp={signUp} />;
     }
 
     // Se há erro nos dados, mostrar tela de erro
     if (dataError) {
-        console.log('❌ Erro nos dados:', dataError);
         return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
                 <div className="bg-slate-800 rounded-xl p-8 max-w-md border border-red-500">
@@ -209,7 +174,6 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
 
     // Se dados estão carregando, mostrar loading
     if (dataLoading) {
-        console.log('⏳ Dados carregando...', { isOnline });
         return (
             <div className="min-h-screen bg-slate-900 font-sans text-slate-200 p-4 sm:p-6 lg:p-8">
                 <div className="max-w-4xl mx-auto pb-24">
@@ -219,17 +183,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
                                 <div className="w-6 h-6 border-2 border-teal-400 border-t-transparent rounded-full animate-spin"></div>
                                 <span className="text-lg font-medium">Carregando seus hábitos...</span>
                             </div>
-                            <p className="text-slate-400 mb-4">
-                                {isOnline ? 'Sincronizando dados...' : 'Carregando dados offline...'}
-                            </p>
-                            
-                            {/* Botão de emergência para pular loading */}
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="bg-orange-500 hover:bg-orange-400 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
-                            >
-                                🔄 Se travou, clique aqui
-                            </button>
+                            <p className="text-slate-400">Preparando tudo para você</p>
                         </div>
                         
                         <SkeletonLoader variant="habit" count={3} />
@@ -239,25 +193,6 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
             </div>
         );
     }
-
-    // Se está offline e não há dados, mostrar diagnóstico
-    if (!isOnline && !user && habits.length === 0) {
-        console.log('📴 Offline sem dados - mostrando diagnóstico');
-        return (
-            <DiagnosticScreen 
-                isOnline={isOnline} 
-                onRetry={() => window.location.reload()} 
-            />
-        );
-    }
-
-    // Debug: Log final antes da renderização
-    console.log('🎯 Renderizando app principal:', { 
-        user: !!user, 
-        habitsCount: habits.length, 
-        isOnline, 
-        currentView 
-    });
 
     const renderView = () => {
         switch (currentView) {
@@ -318,74 +253,8 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
                 setCurrentView={setCurrentView}
                 onAddClick={() => setIsModalOpen(true)}
             />
-            
-            {/* Debug Panel */}
-            <DebugPanel
-                debugInfo={{
-                    authLoading,
-                    authError,
-                    user: !!user,
-                    dataLoading,
-                    dataError,
-                    isOnline,
-                    habitsCount: habits.length,
-                    currentView,
-                    serviceWorkerReady
-                }}
-                isVisible={showDebug}
-                onToggle={() => setShowDebug(!showDebug)}
-            />
         </div>
     );
-    } catch (error) {
-        console.error('🚨 Erro crítico no App:', error);
-        return (
-            <div className="min-h-screen bg-slate-900 font-sans text-slate-200 p-4">
-                <div className="max-w-md mx-auto mt-8">
-                    <div className="text-center mb-8">
-                        <div className="inline-flex items-center gap-2 text-red-400 mb-4">
-                            <div className="w-12 h-12 text-4xl">🚨</div>
-                        </div>
-                        <h1 className="text-2xl font-bold text-white mb-2">
-                            Erro Crítico
-                        </h1>
-                        <p className="text-slate-400">
-                            O app encontrou um erro inesperado.
-                        </p>
-                    </div>
-
-                    <div className="bg-slate-800 rounded-xl p-6 mb-6 border border-red-500/50">
-                        <h2 className="text-lg font-bold text-white mb-4">🔧 Detalhes do Erro</h2>
-                        <div className="text-sm text-red-300 break-all">
-                            {error instanceof Error ? error.message : 'Erro desconhecido'}
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="w-full bg-teal-500 hover:bg-teal-400 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-                        >
-                            🔄 Recarregar Página
-                        </button>
-                        
-                        <button
-                            onClick={() => {
-                                localStorage.clear();
-                                if ('indexedDB' in window) {
-                                    indexedDB.deleteDatabase('habitos-offline-db');
-                                }
-                                window.location.reload();
-                            }}
-                            className="w-full bg-red-600 hover:bg-red-500 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-                        >
-                            🗑️ Limpar Dados e Recarregar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 };
 
 export default App;

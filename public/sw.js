@@ -1,18 +1,10 @@
-const CACHE_NAME = 'habitos-app-v4';
-const DATA_CACHE_NAME = 'habitos-data-v4';
+const CACHE_NAME = 'habitos-app-v3';
+const DATA_CACHE_NAME = 'habitos-data-v3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
   // Assets serão cacheados dinamicamente
-];
-
-// Lista de assets críticos para cache
-const criticalAssets = [
-  '/assets/index.css',
-  '/assets/index.js',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
 ];
 
 // Install event - Cache recursos críticos
@@ -22,29 +14,10 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('✅ Cache aberto');
-        // Cache apenas recursos básicos primeiro
         return cache.addAll(urlsToCache);
       })
       .then(() => {
         console.log('🚀 Cache inicial concluído');
-        // Cache assets críticos em background
-        return caches.open(CACHE_NAME).then(cache => {
-          return Promise.allSettled(
-            criticalAssets.map(url => 
-              fetch(url).then(response => {
-                if (response.ok) {
-                  cache.put(url, response);
-                  console.log('📦 Asset cacheado:', url);
-                }
-              }).catch(error => {
-                console.log('⚠️ Erro ao cachear asset:', url, error);
-              })
-            )
-          );
-        });
-      })
-      .then(() => {
-        console.log('🚀 Service Worker pronto');
         return self.skipWaiting(); // Força ativação imediata
       })
   );

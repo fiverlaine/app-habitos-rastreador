@@ -34,20 +34,11 @@ export class OfflineStorage {
     }
 
     return new Promise<IDBDatabase>((resolve, reject) => {
-      // Verificar se IndexedDB está disponível
-      if (!('indexedDB' in window)) {
-        const error = new Error('IndexedDB não está disponível neste navegador');
-        console.error('❌ IndexedDB não suportado:', error);
-        reject(error);
-        return;
-      }
-
       const request = indexedDB.open(this.dbName, this.version);
       
       request.onerror = () => {
-        const error = request.error || new Error('Erro desconhecido ao abrir IndexedDB');
-        console.error('❌ Erro ao abrir IndexedDB:', error);
-        reject(error);
+        console.error('❌ Erro ao abrir IndexedDB:', request.error);
+        reject(request.error);
       };
       
       request.onsuccess = () => {

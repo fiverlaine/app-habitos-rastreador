@@ -28,37 +28,9 @@ export const useHybridData = (user: User | null): HybridDataResult => {
   });
   const [pendingOperations, setPendingOperations] = useState<PendingOperation[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [offlineError, setOfflineError] = useState<string | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Tratamento de erro para useSupabaseData
-  let supabaseData;
-  try {
-    supabaseData = useSupabaseData(user);
-  } catch (error) {
-    console.error('❌ Erro no useSupabaseData:', error);
-    supabaseData = {
-      habits: [],
-      completions: [],
-      unlockedAchievements: new Set(),
-      loading: false,
-      error: 'Erro ao carregar dados do Supabase',
-      addHabit: async () => { throw new Error('Supabase não disponível'); },
-      deleteHabit: async () => { throw new Error('Supabase não disponível'); },
-      toggleCompletion: async () => { throw new Error('Supabase não disponível'); },
-      addAchievement: async () => { throw new Error('Supabase não disponível'); },
-      refreshData: async () => {}
-    };
-  }
-
-  // Tratamento de erro para OfflineStorage
-  let offlineStorage;
-  try {
-    offlineStorage = OfflineStorage.getInstance();
-  } catch (error) {
-    console.error('❌ Erro ao inicializar OfflineStorage:', error);
-    setOfflineError('Erro ao inicializar armazenamento offline');
-  }
+  const supabaseData = useSupabaseData(user);
+  const offlineStorage = OfflineStorage.getInstance();
 
   // Monitorar status de conexão
   useEffect(() => {
@@ -77,29 +49,16 @@ export const useHybridData = (user: User | null): HybridDataResult => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Timeout de segurança para garantir que o loading termine
-    const loadingTimeout = setTimeout(() => {
-      if (!isInitialized) {
-        console.log('⏰ Timeout de loading - forçando inicialização');
-        setIsInitialized(true);
-        setOfflineError('Timeout de carregamento');
-      }
-    }, 10000); // 10 segundos
-    
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearTimeout(loadingTimeout);
     };
-  }, [isInitialized]);
+  }, []);
 
   // Carregar dados offline quando necessário
   useEffect(() => {
     if (!isOnline && user) {
       loadOfflineData();
-    } else if (!user) {
-      // Se não há usuário, marcar como inicializado
-      setIsInitialized(true);
     }
   }, [isOnline, user]);
 
@@ -111,33 +70,18 @@ export const useHybridData = (user: User | null): HybridDataResult => {
   }, [user]);
 
   const loadOfflineData = async () => {
-    if (!user) {
-      console.log('⚠️ Sem usuário - não carregando dados offline');
-      setIsInitialized(true);
-      return;
-    }
-    
-    if (!offlineStorage) {
-      console.error('❌ OfflineStorage não disponível');
-      setOfflineError('Armazenamento offline não disponível');
-      setIsInitialized(true);
-      return;
-    }
+    if (!user) return;
     
     try {
-      setOfflineError(null);
       const data = await offlineStorage.getAllOfflineData(user.id);
       setOfflineData({
         habits: data.habits,
         completions: data.completions,
         unlockedAchievements: new Set(data.achievements.map(a => a.achievement_id))
       });
-      console.log('📱 Dados offline carregados:', data.habits.length, 'hábitos');
+      console.log('📱 Dados offline carregados');
     } catch (error) {
       console.error('❌ Erro ao carregar dados offline:', error);
-      setOfflineError('Erro ao carregar dados offline');
-    } finally {
-      setIsInitialized(true);
     }
   };
 
@@ -354,24 +298,13 @@ export const useHybridData = (user: User | null): HybridDataResult => {
     }
   }, [isOnline, supabaseData]);
 
-  // Log de debug para estado de loading
-  const loadingState = !isInitialized || supabaseData.loading || isSyncing;
-  console.log('🔄 Loading state:', { 
-    isInitialized, 
-    supabaseLoading: supabaseData.loading, 
-    isSyncing, 
-    finalLoading: loadingState,
-    isOnline,
-    hasUser: !!user
-  });
-
   // Retornar dados baseados no status de conexão
   return {
     habits: isOnline ? supabaseData.habits : offlineData.habits,
     completions: isOnline ? supabaseData.completions : offlineData.completions,
     unlockedAchievements: isOnline ? supabaseData.unlockedAchievements : offlineData.unlockedAchievements,
-    loading: loadingState,
-    error: supabaseData.error || offlineError,
+    loading: supabaseData.loading || isSyncing,
+    error: supabaseData.error,
     isOnline,
     addHabit,
     deleteHabit,

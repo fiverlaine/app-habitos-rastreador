@@ -126,18 +126,6 @@ export const WifiSlashIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
-export const ChevronDownIcon: React.FC<IconProps> = (props) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-    </svg>
-);
-
-export const ChevronUpIcon: React.FC<IconProps> = (props) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-    </svg>
-);
-
 
 const iconMap: { [key: string]: React.FC<IconProps> } = {
     Book, Water, Dumbbell, Run, Code, Meditate, Fruit,
