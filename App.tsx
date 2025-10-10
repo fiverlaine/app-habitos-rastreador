@@ -36,8 +36,14 @@ const App: React.FC = () => {
         visible: false
     });
     
+    // Debug: Log inicial
+    console.log('🚀 App iniciando...');
+    
     // Autenticação
     const { user, loading: authLoading, error: authError, signIn, signUp, signOut } = useAuth();
+    
+    // Debug: Log de autenticação
+    console.log('🔐 Auth state:', { user: !!user, loading: authLoading, error: authError });
     
     // Dados híbridos (online + offline) - só chama se há usuário
     const hybridData = useHybridData(user);
@@ -54,6 +60,14 @@ const App: React.FC = () => {
         addAchievement: addAchievementToDb,
         syncOfflineData,
     } = hybridData || {};
+    
+    // Debug: Log de dados híbridos
+    console.log('📊 Hybrid data state:', { 
+        habitsCount: habits.length, 
+        loading: dataLoading, 
+        error: dataError, 
+        isOnline 
+    });
 
     // Sistema de conquistas - SEMPRE chamado, mas só executa se há usuário
     useEffect(() => {
@@ -145,6 +159,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
 
     // Se não estiver autenticado, mostrar tela de login
     if (authLoading) {
+        console.log('⏳ Auth loading...');
         return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center">
                 <div className="text-white text-2xl">⏳ Carregando...</div>
@@ -153,11 +168,13 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
     }
 
     if (!user) {
+        console.log('👤 Sem usuário - mostrando tela de login');
         return <Auth onSignIn={signIn} onSignUp={signUp} />;
     }
 
     // Se há erro nos dados, mostrar tela de erro
     if (dataError) {
+        console.log('❌ Erro nos dados:', dataError);
         return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
                 <div className="bg-slate-800 rounded-xl p-8 max-w-md border border-red-500">
@@ -176,6 +193,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
 
     // Se dados estão carregando, mostrar loading
     if (dataLoading) {
+        console.log('⏳ Dados carregando...', { isOnline });
         return (
             <div className="min-h-screen bg-slate-900 font-sans text-slate-200 p-4 sm:p-6 lg:p-8">
                 <div className="max-w-4xl mx-auto pb-24">
@@ -200,8 +218,17 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
 
     // Se está offline e não há dados, mostrar fallback
     if (!isOnline && !user && habits.length === 0) {
+        console.log('📴 Offline sem dados - mostrando fallback');
         return <OfflineFallback isOnline={isOnline} hasData={habits.length > 0} />;
     }
+
+    // Debug: Log final antes da renderização
+    console.log('🎯 Renderizando app principal:', { 
+        user: !!user, 
+        habitsCount: habits.length, 
+        isOnline, 
+        currentView 
+    });
 
     const renderView = () => {
         switch (currentView) {
