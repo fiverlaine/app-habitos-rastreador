@@ -25,20 +25,22 @@ import OfflineStatus from './components/OfflineStatus';
 import OfflineFallback from './components/OfflineFallback';
 import DebugPanel from './components/DebugPanel';
 import DiagnosticScreen from './components/DiagnosticScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 import { PlusIcon } from './components/icons';
 
 const App: React.FC = () => {
-    // SEMPRE chamar hooks na mesma ordem
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentView, setCurrentView] = useState<View>('dashboard');
-    const [toastAchievement, setToastAchievement] = useState<Achievement | null>(null);
-    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info'; visible: boolean }>({
-        message: '',
-        type: 'info',
-        visible: false
-    });
-    const [showDebug, setShowDebug] = useState(false);
-    const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
+    try {
+        // SEMPRE chamar hooks na mesma ordem
+        const [isModalOpen, setIsModalOpen] = useState(false);
+        const [currentView, setCurrentView] = useState<View>('dashboard');
+        const [toastAchievement, setToastAchievement] = useState<Achievement | null>(null);
+        const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info'; visible: boolean }>({
+            message: '',
+            type: 'info',
+            visible: false
+        });
+        const [showDebug, setShowDebug] = useState(false);
+        const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
     
     // Debug: Log inicial
     console.log('🚀 App iniciando...');
@@ -327,6 +329,55 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
             />
         </div>
     );
+    } catch (error) {
+        console.error('🚨 Erro crítico no App:', error);
+        return (
+            <div className="min-h-screen bg-slate-900 font-sans text-slate-200 p-4">
+                <div className="max-w-md mx-auto mt-8">
+                    <div className="text-center mb-8">
+                        <div className="inline-flex items-center gap-2 text-red-400 mb-4">
+                            <div className="w-12 h-12 text-4xl">🚨</div>
+                        </div>
+                        <h1 className="text-2xl font-bold text-white mb-2">
+                            Erro Crítico
+                        </h1>
+                        <p className="text-slate-400">
+                            O app encontrou um erro inesperado.
+                        </p>
+                    </div>
+
+                    <div className="bg-slate-800 rounded-xl p-6 mb-6 border border-red-500/50">
+                        <h2 className="text-lg font-bold text-white mb-4">🔧 Detalhes do Erro</h2>
+                        <div className="text-sm text-red-300 break-all">
+                            {error instanceof Error ? error.message : 'Erro desconhecido'}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="w-full bg-teal-500 hover:bg-teal-400 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                        >
+                            🔄 Recarregar Página
+                        </button>
+                        
+                        <button
+                            onClick={() => {
+                                localStorage.clear();
+                                if ('indexedDB' in window) {
+                                    indexedDB.deleteDatabase('habitos-offline-db');
+                                }
+                                window.location.reload();
+                            }}
+                            className="w-full bg-red-600 hover:bg-red-500 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                        >
+                            🗑️ Limpar Dados e Recarregar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 };
 
 export default App;
