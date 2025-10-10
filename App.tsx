@@ -23,6 +23,8 @@ import SkeletonLoader from './components/SkeletonLoader';
 import Toast from './components/Toast';
 import OfflineStatus from './components/OfflineStatus';
 import OfflineFallback from './components/OfflineFallback';
+import DebugPanel from './components/DebugPanel';
+import DiagnosticScreen from './components/DiagnosticScreen';
 import { PlusIcon } from './components/icons';
 
 const App: React.FC = () => {
@@ -35,6 +37,8 @@ const App: React.FC = () => {
         type: 'info',
         visible: false
     });
+    const [showDebug, setShowDebug] = useState(false);
+    const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
     
     // Debug: Log inicial
     console.log('🚀 App iniciando...');
@@ -68,6 +72,16 @@ const App: React.FC = () => {
         error: dataError, 
         isOnline 
     });
+
+    // Verificar Service Worker
+    useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(() => {
+                setServiceWorkerReady(true);
+                console.log('✅ Service Worker pronto');
+            });
+        }
+    }, []);
 
     // Sistema de conquistas - SEMPRE chamado, mas só executa se há usuário
     useEffect(() => {
@@ -216,10 +230,15 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
         );
     }
 
-    // Se está offline e não há dados, mostrar fallback
+    // Se está offline e não há dados, mostrar diagnóstico
     if (!isOnline && !user && habits.length === 0) {
-        console.log('📴 Offline sem dados - mostrando fallback');
-        return <OfflineFallback isOnline={isOnline} hasData={habits.length > 0} />;
+        console.log('📴 Offline sem dados - mostrando diagnóstico');
+        return (
+            <DiagnosticScreen 
+                isOnline={isOnline} 
+                onRetry={() => window.location.reload()} 
+            />
+        );
     }
 
     // Debug: Log final antes da renderização
@@ -288,6 +307,23 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
                 currentView={currentView} 
                 setCurrentView={setCurrentView}
                 onAddClick={() => setIsModalOpen(true)}
+            />
+            
+            {/* Debug Panel */}
+            <DebugPanel
+                debugInfo={{
+                    authLoading,
+                    authError,
+                    user: !!user,
+                    dataLoading,
+                    dataError,
+                    isOnline,
+                    habitsCount: habits.length,
+                    currentView,
+                    serviceWorkerReady
+                }}
+                isVisible={showDebug}
+                onToggle={() => setShowDebug(!showDebug)}
             />
         </div>
     );
