@@ -40,7 +40,7 @@ const HabitItem: React.FC<HabitItemProps> = ({ habit, isCompleted, currentValue,
     const [showModal, setShowModal] = useState(false);
 
     return (
-        <div className={`rounded-2xl p-4 flex items-center justify-between transition-all duration-300 border ${isCompleted ? 'opacity-90 border-green-500/40' : 'border-slate-700'} ${habit.type === 'numeric' ? 'bg-slate-800/60' : 'bg-slate-800'}`}>
+        <div className={`rounded-2xl p-4 flex items-center justify-between transition-all duration-500 ease-out transform hover:scale-[1.02] border ${isCompleted ? 'opacity-90 border-green-500/40 bg-green-500/5' : 'border-slate-700 hover:border-slate-600'} ${habit.type === 'numeric' ? 'bg-slate-800/60' : 'bg-slate-800'}`}>
             <div className="flex items-center gap-4 flex-1">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${habit.color}`}>
                     <IconComponent className="w-7 h-7 text-white" />
@@ -52,11 +52,15 @@ const HabitItem: React.FC<HabitItemProps> = ({ habit, isCompleted, currentValue,
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ${isCompleted ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
                                 {currentValue || 0} / {habit.targetValue || 0} {habit.unit && habit.unit !== 'none' ? habit.unit : ''}{isCompleted ? ' • Concluído' : ''}
                             </span>
-                            <div className="w-full bg-slate-700/80 rounded-full h-2 mt-2">
+                            <div className="w-full bg-slate-700/80 rounded-full h-2 mt-2 overflow-hidden">
                                 <div
-                                    className={`h-2 rounded-full transition-all duration-300 ${isCompleted ? 'bg-green-500' : habit.color}`}
+                                    className={`h-2 rounded-full transition-all duration-700 ease-out ${isCompleted ? 'bg-green-500 shadow-sm shadow-green-500/50' : habit.color}`}
                                     style={{ width: `${progressPercentage}%` }}
-                                ></div>
+                                >
+                                    {progressPercentage > 0 && (
+                                        <div className="h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -72,12 +76,14 @@ const HabitItem: React.FC<HabitItemProps> = ({ habit, isCompleted, currentValue,
                 {habit.type === 'boolean' ? (
                     <button
                         onClick={() => onToggle(habit.id)}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                            isCompleted ? 'bg-green-500' : 'bg-slate-700 hover:bg-slate-600'
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ease-out transform hover:scale-110 ${
+                            isCompleted 
+                                ? 'bg-green-500 hover:bg-green-400 shadow-lg shadow-green-500/25' 
+                                : 'bg-slate-700 hover:bg-slate-600 hover:shadow-lg hover:shadow-slate-500/25'
                         }`}
                         aria-label={isCompleted ? 'Desmarcar hábito' : 'Marcar hábito como concluído'}
                     >
-                        <CheckIcon className="w-7 h-7 text-white" />
+                        <CheckIcon className={`w-7 h-7 text-white transition-transform duration-300 ${isCompleted ? 'scale-110' : 'scale-100'}`} />
                     </button>
                 ) : (
                     isCompleted ? (
@@ -87,10 +93,10 @@ const HabitItem: React.FC<HabitItemProps> = ({ habit, isCompleted, currentValue,
                     ) : (
                         <button
                             onClick={() => setShowModal(true)}
-                            className="w-12 h-12 rounded-full flex items-center justify-center bg-teal-500 hover:bg-teal-400 text-white"
+                            className="w-12 h-12 rounded-full flex items-center justify-center bg-teal-500 hover:bg-teal-400 text-white transition-all duration-300 ease-out transform hover:scale-110 hover:shadow-lg hover:shadow-teal-500/25"
                             aria-label="Adicionar valor"
                         >
-                            <PlusIcon className="w-6 h-6" />
+                            <PlusIcon className="w-6 h-6 transition-transform duration-300" />
                         </button>
                     )
                 )}

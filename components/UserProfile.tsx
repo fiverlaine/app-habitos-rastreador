@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { XIcon } from './icons';
+import ThemeToggle from './ThemeToggle';
 import type { User } from '@supabase/supabase-js';
 
 interface UserProfileProps {
@@ -28,7 +29,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onSignOut }) => {
       {/* Botão flutuante de perfil */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed top-4 right-4 z-30 w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold hover:bg-teal-400 transition-colors shadow-lg"
+        className="fixed top-4 right-4 z-30 w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold hover:bg-teal-400 transition-all duration-300 ease-out transform hover:scale-110 shadow-lg hover:shadow-xl hover:shadow-teal-500/25"
         aria-label="Abrir perfil"
       >
         {user.email?.charAt(0).toUpperCase()}
@@ -46,12 +47,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onSignOut }) => {
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white">Perfil</h2>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                <XIcon className="w-6 h-6" />
-              </button>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <XIcon className="w-6 h-6" />
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4">

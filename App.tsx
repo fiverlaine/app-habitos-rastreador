@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Habit, Completion, View, Achievement } from './types';
 import { achievementsList } from './utils/achievements';
 import { useAuth } from './hooks/useAuth';
-import { useSupabaseData } from './hooks/useSupabaseData';
+import { useHybridData } from './hooks/useHybridData';
 import Auth from './components/Auth';
 import Header from './components/Header';
 import HabitList from './components/HabitList';
@@ -19,6 +19,9 @@ import AddTemplates from './components/AddTemplates';
 import UserProfile from './components/UserProfile';
 import DebugInfo from './components/DebugInfo';
 import PWAInstaller from './components/PWAInstaller';
+import SkeletonLoader from './components/SkeletonLoader';
+import Toast from './components/Toast';
+import OfflineStatus from './components/OfflineStatus';
 import { PlusIcon } from './components/icons';
 
 const App: React.FC = () => {
@@ -26,22 +29,29 @@ const App: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentView, setCurrentView] = useState<View>('dashboard');
     const [toastAchievement, setToastAchievement] = useState<Achievement | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info'; visible: boolean }>({
+        message: '',
+        type: 'info',
+        visible: false
+    });
     
     // Autenticação
     const { user, loading: authLoading, error: authError, signIn, signUp, signOut } = useAuth();
     
-    // Dados do Supabase (sempre chamado, mas pode retornar dados vazios se não há usuário)
+    // Dados híbridos (online + offline)
     const {
         habits,
         completions,
         unlockedAchievements,
         loading: dataLoading,
         error: dataError,
+        isOnline,
         addHabit: addHabitToDb,
         deleteHabit: deleteHabitFromDb,
         toggleCompletion: toggleCompletionInDb,
         addAchievement: addAchievementToDb,
-    } = useSupabaseData(user);
+        syncOfflineData,
+    } = useHybridData(user);
 
     // Sistema de conquistas - SEMPRE chamado, mas só executa se há usuário
     useEffect(() => {
@@ -71,31 +81,46 @@ const App: React.FC = () => {
             await addHabitToDb(habit);
             setIsModalOpen(false);
             setCurrentView('dashboard');
+            setToast({ message: `Hábito "${habit.name}" criado com sucesso! 🎉`, type: 'success', visible: true });
         } catch (error) {
             console.error('Erro ao adicionar hábito:', error);
-            alert('Erro ao adicionar hábito. Tente novamente.');
+            setToast({ message: 'Erro ao adicionar hábito. Tente novamente.', type: 'error', visible: true });
         }
     };
     
     const deleteHabit = useCallback(async (habitId: string) => {
+        const habit = habits.find(h => h.id === habitId);
         if (window.confirm("Você tem certeza que quer deletar este hábito? Todo o progresso será perdido.")) {
             try {
                 await deleteHabitFromDb(habitId);
+                setToast({ message: `Hábito "${habit?.name}" removido com sucesso!`, type: 'success', visible: true });
             } catch (error) {
                 console.error('Erro ao deletar hábito:', error);
-                alert('Erro ao deletar hábito. Tente novamente.');
+                setToast({ message: 'Erro ao deletar hábito. Tente novamente.', type: 'error', visible: true });
             }
         }
-    }, [deleteHabitFromDb]);
+    }, [deleteHabitFromDb, habits]);
 
     const toggleCompletion = useCallback(async (habitId: string, value?: number) => {
+        const habit = habits.find(h => h.id === habitId);
         try {
             await toggleCompletionInDb(habitId, value);
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayCompletions = completions.filter(c => c.habitId === habitId && c.date === todayStr);
+            const isCompleted = habit?.type === 'boolean' 
+                ? todayCompletions.length > 0
+                : habit?.targetValue ? (todayCompletions.reduce((sum, c) => sum + (c.value || 0), 0) >= habit.targetValue) : false;
+            
+            if (isCompleted) {
+                setToast({ message: `Parabéns! "${habit?.name}" concluído! 🎉`, type: 'success', visible: true });
+            } else {
+                setToast({ message: `Progresso atualizado em "${habit?.name}"!`, type: 'info', visible: true });
+            }
         } catch (error) {
             console.error('Erro ao toggle conclusão:', error);
-            alert('Erro ao atualizar conclusão. Tente novamente.');
+            setToast({ message: 'Erro ao atualizar conclusão. Tente novamente.', type: 'error', visible: true });
         }
-    }, [toggleCompletionInDb]);
+    }, [toggleCompletionInDb, habits, completions]);
 
     // Se há erro de configuração, mostrar tela de erro
     if (authError) {
@@ -150,10 +175,20 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
     // Se dados estão carregando, mostrar loading
     if (dataLoading) {
         return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="text-white text-2xl mb-4">⏳ Carregando dados...</div>
-                    <div className="text-slate-400">Aguarde um momento</div>
+            <div className="min-h-screen bg-slate-900 font-sans text-slate-200 p-4 sm:p-6 lg:p-8">
+                <div className="max-w-4xl mx-auto pb-24">
+                    <main className="mt-8 space-y-6">
+                        <div className="text-center mb-8">
+                            <div className="inline-flex items-center gap-2 text-teal-400 mb-2">
+                                <div className="w-6 h-6 border-2 border-teal-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-lg font-medium">Carregando seus hábitos...</span>
+                            </div>
+                            <p className="text-slate-400">Preparando tudo para você</p>
+                        </div>
+                        
+                        <SkeletonLoader variant="habit" count={3} />
+                        <SkeletonLoader variant="stats" />
+                    </main>
                 </div>
             </div>
         );
@@ -204,6 +239,13 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
             )}
             
             <AchievementToast achievement={toastAchievement} onClose={() => setToastAchievement(null)} />
+            <Toast 
+                message={toast.message}
+                type={toast.type}
+                isVisible={toast.visible}
+                onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+            />
+            <OfflineStatus isOnline={isOnline} />
             <UserProfile user={user} onSignOut={signOut} />
             <PWAInstaller />
             <BottomNav 

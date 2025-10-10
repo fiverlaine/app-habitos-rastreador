@@ -4,16 +4,30 @@ import { PlusIcon, XIcon } from './icons';
 const PWAInstaller: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     // Registrar service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('SW registrado com sucesso:', registration);
+          console.log('✅ Service Worker registrado com sucesso:', registration);
+          
+          // Verificar se há atualizações
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('🔄 Nova versão disponível!');
+                  // Opcional: mostrar notificação de atualização
+                }
+              });
+            }
+          });
         })
         .catch((error) => {
-          console.log('Erro ao registrar SW:', error);
+          console.error('❌ Erro ao registrar Service Worker:', error);
         });
     }
 
@@ -28,9 +42,26 @@ const PWAInstaller: React.FC = () => {
 
     // Detectar se já foi instalado
     window.addEventListener('appinstalled', () => {
+      console.log('🎉 PWA instalado com sucesso!');
       setShowInstallPrompt(false);
       setDeferredPrompt(null);
+      setIsInstalled(true);
     });
+
+    // Verificar se já está instalado (para PWA)
+    const checkIfInstalled = () => {
+      // Verifica se está rodando em modo standalone (instalado)
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      // Ou se foi adicionado à tela inicial no iOS
+      const isIOSInstalled = (window.navigator as any).standalone === true;
+      
+      if (isStandalone || isIOSInstalled) {
+        setIsInstalled(true);
+        setShowInstallPrompt(false);
+      }
+    };
+
+    checkIfInstalled();
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -41,13 +72,14 @@ const PWAInstaller: React.FC = () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response to the install prompt: ${outcome}`);
+      console.log(`✅ Usuário ${outcome === 'accepted' ? 'aceitou' : 'recusou'} a instalação`);
       setDeferredPrompt(null);
       setShowInstallPrompt(false);
     }
   };
 
-  if (!showInstallPrompt) return null;
+  // Não mostrar se já está instalado ou se não há prompt
+  if (isInstalled || !showInstallPrompt) return null;
 
   return (
     <div className="fixed bottom-20 left-4 right-4 bg-slate-800 border border-teal-500/50 rounded-xl p-4 shadow-2xl z-50">

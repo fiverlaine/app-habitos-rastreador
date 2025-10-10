@@ -48,7 +48,7 @@ const AddHabitModal: React.FC<AddHabitModalProps> = ({ onClose, onAddHabit }) =>
             onClick={onClose}
         >
             <div
-                className="bg-slate-800 rounded-xl p-8 w-full max-w-md shadow-2xl border border-slate-700"
+                className="bg-slate-800 rounded-xl p-6 sm:p-8 w-full max-w-md shadow-2xl border border-slate-700 max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center mb-6">
@@ -146,15 +146,15 @@ const AddHabitModal: React.FC<AddHabitModalProps> = ({ onClose, onAddHabit }) =>
 
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-slate-300 mb-2">Ícone</label>
-                        <div className="grid grid-cols-7 gap-2">
+                        <div className="grid grid-cols-6 sm:grid-cols-7 gap-2">
                             {HABIT_ICONS.map(icon => (
                                 <button
                                     type="button"
                                     key={icon}
                                     onClick={() => setSelectedIcon(icon)}
-                                    className={`flex justify-center items-center p-2 rounded-lg transition-all ${selectedIcon === icon ? 'bg-indigo-600 ring-2 ring-white' : 'bg-slate-700 hover:bg-slate-600'}`}
+                                    className={`flex justify-center items-center p-2 sm:p-3 rounded-lg transition-all duration-300 ease-out transform hover:scale-105 ${selectedIcon === icon ? 'bg-indigo-600 ring-2 ring-white scale-105' : 'bg-slate-700 hover:bg-slate-600'}`}
                                 >
-                                    {React.createElement(getIconComponent(icon), { className: 'w-6 h-6 text-white' })}
+                                    {React.createElement(getIconComponent(icon), { className: 'w-5 h-5 sm:w-6 sm:h-6 text-white' })}
                                 </button>
                             ))}
                         </div>
@@ -162,13 +162,13 @@ const AddHabitModal: React.FC<AddHabitModalProps> = ({ onClose, onAddHabit }) =>
                     
                     <div className="mb-6">
                         <label className="block text-sm font-medium text-slate-300 mb-2">Cor</label>
-                        <div className="grid grid-cols-9 gap-2">
+                        <div className="grid grid-cols-6 sm:grid-cols-9 gap-2">
                            {HABIT_COLORS.map(color => (
                                 <button
                                     type="button"
                                     key={color}
                                     onClick={() => setSelectedColor(color)}
-                                    className={`w-8 h-8 rounded-full ${color} transition-transform transform hover:scale-110 ${selectedColor === color ? 'ring-2 ring-offset-2 ring-offset-slate-800 ring-white' : ''}`}
+                                    className={`w-10 h-10 sm:w-8 sm:h-8 rounded-full ${color} transition-all duration-300 ease-out transform hover:scale-110 ${selectedColor === color ? 'ring-2 ring-offset-2 ring-offset-slate-800 ring-white scale-110' : ''}`}
                                 ></button>
                             ))}
                         </div>

@@ -86,12 +86,12 @@ const Statistics: React.FC<StatisticsProps> = ({ habits, completions }) => {
 
             <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                    <div className="h-56 flex items-center justify-center">
+                    <div className="h-48 sm:h-56 flex items-center justify-center">
                         <Donut value={stats.overallCompletionRate} />
                     </div>
                     <div className="text-center md:text-left">
-                        <div className="text-4xl font-extrabold text-white">{stats.overallCompletionRate.toFixed(2)}%</div>
-                        <div className="text-slate-400">Taxa Geral</div>
+                        <div className="text-3xl sm:text-4xl font-extrabold text-white">{stats.overallCompletionRate.toFixed(2)}%</div>
+                        <div className="text-slate-400 text-sm sm:text-base">Taxa Geral</div>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">

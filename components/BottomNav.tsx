@@ -26,12 +26,12 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentView, setCurrentView, onAd
                             <button
                                 key={index}
                                 onClick={() => setCurrentView(view)}
-                                className="flex flex-col items-center justify-center -mt-6"
+                                className="flex flex-col items-center justify-center -mt-6 transition-transform duration-300 ease-out hover:scale-105 active:scale-95"
                             >
-                                <div className="bg-teal-500 rounded-full p-4 shadow-lg">
-                                    <Icon className="w-6 h-6 text-white" />
+                                <div className="bg-teal-500 hover:bg-teal-400 rounded-full p-4 shadow-lg transition-all duration-300 ease-out hover:shadow-xl hover:shadow-teal-500/25">
+                                    <Icon className="w-6 h-6 text-white transition-transform duration-300" />
                                 </div>
-                                <span className="text-xs font-medium text-slate-400 mt-1">{label}</span>
+                                <span className="text-xs font-medium text-slate-400 mt-1 transition-colors duration-300">{label}</span>
                             </button>
                         );
                     }
@@ -41,13 +41,18 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentView, setCurrentView, onAd
                         <button
                             key={view}
                             onClick={() => setCurrentView(view)}
-                            className={`flex flex-col items-center justify-center gap-1 w-full py-2 transition-colors duration-200 ${
+                            className={`flex flex-col items-center justify-center gap-1 w-full py-2 transition-all duration-300 ease-out relative ${
                                 isActive ? 'text-teal-400' : 'text-slate-400 hover:text-white'
                             }`}
                             aria-current={isActive ? 'page' : undefined}
                         >
-                            <Icon className="w-6 h-6" />
-                            <span className="text-xs font-medium">{label}</span>
+                            <div className={`transition-all duration-300 ease-out ${isActive ? 'scale-110' : 'scale-100 hover:scale-105'}`}>
+                                <Icon className="w-6 h-6" />
+                            </div>
+                            <span className={`text-xs font-medium transition-all duration-300 ${isActive ? 'text-teal-400 font-semibold' : 'text-slate-400'}`}>{label}</span>
+                            {isActive && (
+                                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-teal-400 rounded-full animate-pulse"></div>
+                            )}
                         </button>
                     );
                 })}
