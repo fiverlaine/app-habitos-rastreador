@@ -7,6 +7,9 @@ interface NotificationSettingsProps {
 }
 
 const NotificationSettings: React.FC<NotificationSettingsProps> = ({ onClose }) => {
+    const PUSH_SERVER_URL = import.meta.env.VITE_PUSH_SERVER_URL || '';
+    const isBackendConfigured = PUSH_SERVER_URL !== '' && !PUSH_SERVER_URL.includes('localhost');
+    
     const { 
         permission, 
         isSupported, 
@@ -136,7 +139,24 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ onClose }) 
                         </ul>
                     </div>
 
-                    {permission === 'granted' && (
+                    {!isBackendConfigured && (
+                        <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/30">
+                            <p className="text-yellow-400 text-sm mb-2 font-semibold">⚠️ Backend não configurado</p>
+                            <p className="text-xs text-slate-300 mb-2">
+                                Para usar notificações push, você precisa:
+                            </p>
+                            <ol className="text-xs text-slate-300 space-y-1 ml-4 list-decimal">
+                                <li>Deployar o backend em Railway/Render</li>
+                                <li>Configurar VITE_PUSH_SERVER_URL na Vercel</li>
+                                <li>Recarregar a aplicação</li>
+                            </ol>
+                            <p className="text-xs text-slate-400 mt-2">
+                                Por enquanto, apenas notificações locais estão disponíveis.
+                            </p>
+                        </div>
+                    )}
+
+                    {permission === 'granted' && isBackendConfigured && (
                         <div className="bg-teal-500/10 rounded-lg p-4 border border-teal-500/30">
                             <p className="text-teal-400 text-sm flex items-center gap-2">
                                 <span>✅</span>
@@ -163,10 +183,16 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ onClose }) 
                     {permission === 'default' && (
                         <button
                             onClick={handleRequestPermission}
-                            className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                            disabled={!isBackendConfigured}
+                            className={`w-full font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                                isBackendConfigured
+                                    ? 'bg-teal-600 hover:bg-teal-500 text-white'
+                                    : 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                            }`}
+                            title={!isBackendConfigured ? 'Configure o backend primeiro' : ''}
                         >
                             <BellIcon className="w-5 h-5" />
-                            Ativar Notificações
+                            {isBackendConfigured ? 'Ativar Notificações' : 'Backend não configurado'}
                         </button>
                     )}
 

@@ -4,7 +4,9 @@ import type { Habit } from '../types';
 import type { User } from '@supabase/supabase-js';
 
 // URL do backend de push notifications
-const PUSH_SERVER_URL = import.meta.env.VITE_PUSH_SERVER_URL || 'http://localhost:5000';
+// Em produção, deve ser configurada na Vercel como variável de ambiente
+const PUSH_SERVER_URL = import.meta.env.VITE_PUSH_SERVER_URL || 
+  (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001');
 
 interface NotificationPermissionState {
     permission: NotificationPermission;
@@ -24,6 +26,13 @@ export const useNotifications = (user: User | null) => {
     // Buscar chave VAPID pública do backend
     useEffect(() => {
         const fetchVapidKey = async () => {
+            // Se não há URL configurada em produção, não tentar buscar
+            if (!PUSH_SERVER_URL || PUSH_SERVER_URL === '') {
+                console.warn('⚠️ VITE_PUSH_SERVER_URL não configurada. Notificações push não estarão disponíveis.');
+                console.warn('💡 Configure VITE_PUSH_SERVER_URL na Vercel com a URL do seu backend de push.');
+                return;
+            }
+
             try {
                 const response = await fetch(`${PUSH_SERVER_URL}/api/vapid-public-key`);
                 if (response.ok) {
@@ -32,9 +41,16 @@ export const useNotifications = (user: User | null) => {
                     console.log('✅ Chave VAPID pública carregada');
                 } else {
                     console.error('❌ Erro ao buscar chave VAPID:', response.statusText);
+                    console.warn('💡 Verifique se o backend de push está rodando e acessível.');
                 }
             } catch (error) {
                 console.error('❌ Erro ao conectar ao servidor de push:', error);
+                if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+                    console.warn('💡 Verifique se:');
+                    console.warn('   1. O backend está rodando e acessível');
+                    console.warn('   2. A URL está correta (não use localhost em produção)');
+                    console.warn('   3. CORS está configurado no backend');
+                }
             }
         };
 
@@ -116,7 +132,13 @@ export const useNotifications = (user: User | null) => {
         }
 
         if (!vapidPublicKey) {
-            console.error('❌ Chave VAPID não carregada. Verifique se o servidor está rodando.');
+            console.error('❌ Chave VAPID não carregada.');
+            if (!PUSH_SERVER_URL || PUSH_SERVER_URL === '') {
+                console.error('💡 Configure VITE_PUSH_SERVER_URL na Vercel (Settings > Environment Variables)');
+                console.error('💡 Deploy o backend primeiro em Railway/Render e depois configure a URL');
+            } else {
+                console.error('💡 Verifique se o servidor de push está rodando em:', PUSH_SERVER_URL);
+            }
             return false;
         }
 
