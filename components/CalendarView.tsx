@@ -67,21 +67,88 @@ const CalendarView: React.FC<CalendarViewProps> = ({ habits, completions }) => {
                     const dateStr = day.toISOString().split('T')[0];
                     const dayCompletions = completionsByDate.get(dateStr) || [];
                     const isToday = dateStr === new Date().toISOString().split('T')[0];
+                    
+                    // Calcular taxa de conclusão para o dia
+                    const getDayCompletionRate = () => {
+                        const habitsOnThatDay = habits.filter(h => {
+                            const habitCreatedDate = new Date(h.createdAt).toISOString().split('T')[0];
+                            return habitCreatedDate <= dateStr;
+                        });
+                        
+                        if (habitsOnThatDay.length === 0) return 0;
+                        
+                        let completed = 0;
+                        habitsOnThatDay.forEach(habit => {
+                            const dayCompletions = completions.filter(c => c.habitId === habit.id && c.date === dateStr);
+                            
+                            if (habit.type === 'boolean' && dayCompletions.length > 0) {
+                                completed++;
+                            } else if (habit.type === 'numeric' && habit.targetValue) {
+                                const currentValue = dayCompletions.reduce((sum, c) => sum + (c.value || 0), 0);
+                                if (currentValue >= habit.targetValue) {
+                                    completed++;
+                                }
+                            }
+                        });
+                        
+                        return Math.round((completed / habitsOnThatDay.length) * 100);
+                    };
+                    
+                    const completionRate = getDayCompletionRate();
 
                     return (
-                        <div key={dateStr} className="flex flex-col items-center justify-start h-24 p-1 bg-slate-800 border border-slate-700/50 rounded-md">
-                            <span className={`flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium ${isToday ? 'bg-indigo-600 text-white' : ''}`}>
+                        <div key={dateStr} className={`relative flex items-center justify-center min-h-[3rem]`}>
+                            <span className={`text-sm font-medium z-10 ${isToday ? 'text-indigo-400' : 'text-slate-300'}`}>
                                 {day.getDate()}
                             </span>
-                            <div className="flex flex-wrap justify-center gap-1 mt-1">
-                                {dayCompletions.slice(0, 4).map((color, i) => (
-                                    <div key={i} className={`w-2 h-2 rounded-full ${color}`}></div>
-                                ))}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <ProgressCircle progress={completionRate} isToday={isToday} size="small" />
                             </div>
                         </div>
                     );
                 })}
             </div>
+        </div>
+    );
+};
+
+interface ProgressCircleProps {
+    progress: number;
+    isToday: boolean;
+    size?: 'small' | 'medium';
+}
+
+const ProgressCircle: React.FC<ProgressCircleProps> = ({ progress, isToday, size = 'small' }) => {
+    const dimensions = size === 'small' ? { radius: 16, stroke: 3.5, size: 36 } : { radius: 30, stroke: 4, size: 64 };
+    const circumference = 2 * Math.PI * dimensions.radius;
+    const offset = circumference - (progress / 100) * circumference;
+    
+    return (
+        <div className="relative" style={{ width: `${dimensions.size}px`, height: `${dimensions.size}px` }}>
+            <svg width={dimensions.size} height={dimensions.size} className="transform -rotate-90">
+                <circle
+                    cx={dimensions.size / 2}
+                    cy={dimensions.size / 2}
+                    r={dimensions.radius}
+                    fill="none"
+                    stroke="#334155"
+                    strokeWidth={dimensions.stroke}
+                />
+                {progress > 0 && (
+                    <circle
+                        cx={dimensions.size / 2}
+                        cy={dimensions.size / 2}
+                        r={dimensions.radius}
+                        fill="none"
+                        stroke={progress === 100 ? '#22c55e' : '#14b8a6'}
+                        strokeWidth={dimensions.stroke}
+                        strokeDasharray={circumference}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+                    />
+                )}
+            </svg>
         </div>
     );
 };

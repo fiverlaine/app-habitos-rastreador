@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import type { Habit, HabitType, HabitUnit } from '../types';
-import { HABIT_ICONS, HABIT_COLORS, HABIT_UNITS } from '../constants';
-import { getIconComponent, XIcon } from './icons';
+import type { Habit, HabitType, HabitUnit, TimeOfDay } from '../types';
+import { HABIT_ICONS, HABIT_COLORS, HABIT_UNITS, TIME_OF_DAY_OPTIONS } from '../constants';
+import { getIconComponent, XIcon, ClockIcon, BellIcon } from './icons';
+import TimePickerModal from './TimePickerModal';
 
 interface AddHabitModalProps {
     onClose: () => void;
@@ -16,6 +17,10 @@ const AddHabitModal: React.FC<AddHabitModalProps> = ({ onClose, onAddHabit }) =>
     const [habitType, setHabitType] = useState<HabitType>('boolean');
     const [unit, setUnit] = useState<HabitUnit>('none');
     const [targetValue, setTargetValue] = useState<string>('1');
+    const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('anytime');
+    const [scheduledTimes, setScheduledTimes] = useState<string[]>([]);
+    const [reminderEnabled, setReminderEnabled] = useState(true);
+    const [showTimePicker, setShowTimePicker] = useState(false);
     const [error, setError] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -30,6 +35,9 @@ const AddHabitModal: React.FC<AddHabitModalProps> = ({ onClose, onAddHabit }) =>
             icon: selectedIcon,
             color: selectedColor,
             type: habitType,
+            timeOfDay,
+            scheduledTimes,
+            reminderEnabled,
         };
         
         if (habitType === 'numeric') {
@@ -144,6 +152,76 @@ const AddHabitModal: React.FC<AddHabitModalProps> = ({ onClose, onAddHabit }) =>
                         </>
                     )}
 
+                    {/* Período do Dia */}
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Período do Dia</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {TIME_OF_DAY_OPTIONS.map((option) => (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => setTimeOfDay(option.value)}
+                                    className={`px-3 py-3 rounded-lg transition-all text-left ${
+                                        timeOfDay === option.value
+                                            ? 'bg-teal-600 text-white border-2 border-teal-400'
+                                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600 border-2 border-slate-600'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xl">{option.icon}</span>
+                                        <div>
+                                            <div className="font-medium">{option.label}</div>
+                                            <div className="text-xs opacity-75">{option.description}</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Lembretes */}
+                    <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                                <BellIcon className="w-4 h-4 text-teal-400" />
+                                Lembretes
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setReminderEnabled(!reminderEnabled)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                    reminderEnabled ? 'bg-teal-600' : 'bg-slate-600'
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                        reminderEnabled ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                                />
+                            </button>
+                        </div>
+                        
+                        {reminderEnabled && (
+                            <button
+                                type="button"
+                                onClick={() => setShowTimePicker(true)}
+                                className="w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg px-4 py-3 text-white flex items-center justify-between transition-colors"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <ClockIcon className="w-5 h-5 text-teal-400" />
+                                    <span className="text-sm">
+                                        {scheduledTimes.length > 0 
+                                            ? `${scheduledTimes.length} horário${scheduledTimes.length > 1 ? 's' : ''} configurado${scheduledTimes.length > 1 ? 's' : ''}`
+                                            : 'Definir horários'}
+                                    </span>
+                                </div>
+                                <span className="text-slate-400 text-xs">
+                                    {scheduledTimes.length > 0 && scheduledTimes.join(', ')}
+                                </span>
+                            </button>
+                        )}
+                    </div>
+
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-slate-300 mb-2">Ícone</label>
                         <div className="grid grid-cols-6 sm:grid-cols-7 gap-2">
@@ -178,6 +256,14 @@ const AddHabitModal: React.FC<AddHabitModalProps> = ({ onClose, onAddHabit }) =>
                         Criar Hábito
                     </button>
                 </form>
+
+                {/* Time Picker Modal */}
+                <TimePickerModal
+                    open={showTimePicker}
+                    scheduledTimes={scheduledTimes}
+                    onClose={() => setShowTimePicker(false)}
+                    onConfirm={(times) => setScheduledTimes(times)}
+                />
             </div>
         </div>
     );

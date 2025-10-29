@@ -3,13 +3,12 @@ import type { Habit, Completion, View, Achievement } from './types';
 import { achievementsList } from './utils/achievements';
 import { useAuth } from './hooks/useAuth';
 import { useSupabaseData } from './hooks/useSupabaseData';
+import { useNotifications } from './hooks/useNotifications';
 import Auth from './components/Auth';
-import Header from './components/Header';
 import HabitList from './components/HabitList';
 import AddHabitModal from './components/AddHabitModal';
 import Statistics from './components/Statistics';
 import CalendarView from './components/CalendarView';
-import GamificationWidget from './components/GamificationWidget';
 import AchievementsView from './components/AchievementsView';
 import AchievementToast from './components/AchievementToast';
 import BottomNav from './components/BottomNav';
@@ -17,11 +16,10 @@ import WeekView from './components/WeekView';
 import StatsCards from './components/StatsCards';
 import AddTemplates from './components/AddTemplates';
 import UserProfile from './components/UserProfile';
-import DebugInfo from './components/DebugInfo';
 import PWAInstaller from './components/PWAInstaller';
 import SkeletonLoader from './components/SkeletonLoader';
 import Toast from './components/Toast';
-import { PlusIcon } from './components/icons';
+import NotificationSettings from './components/NotificationSettings';
 
 const App: React.FC = () => {
     // SEMPRE chamar hooks na mesma ordem
@@ -33,6 +31,7 @@ const App: React.FC = () => {
         type: 'info',
         visible: false
     });
+    const [showNotificationSettings, setShowNotificationSettings] = useState(false);
     
     // Autenticação
     const { user, loading: authLoading, error: authError, signIn, signUp, signOut } = useAuth();
@@ -46,9 +45,18 @@ const App: React.FC = () => {
         error: dataError,
         addHabit: addHabitToDb,
         deleteHabit: deleteHabitFromDb,
+        updateHabit: updateHabitInDb,
         toggleCompletion: toggleCompletionInDb,
         addAchievement: addAchievementToDb,
     } = useSupabaseData(user);
+
+    // Sistema de notificações
+    const {
+        permission,
+        isSupported,
+        scheduleAllNotifications,
+        sendStreakReminderNotification,
+    } = useNotifications(user);
 
     // Sistema de conquistas - SEMPRE chamado, mas só executa se há usuário
     useEffect(() => {
@@ -72,13 +80,20 @@ const App: React.FC = () => {
         }
     }, [habits, completions, unlockedAchievements, toastAchievement, user, addAchievementToDb]);
 
+    // Agendar notificações quando os hábitos mudarem
+    useEffect(() => {
+        if (!user || !isSupported || permission !== 'granted') return;
+        
+        // Agendar notificações para todos os hábitos com lembretes ativos
+        scheduleAllNotifications(habits);
+    }, [habits, user, isSupported, permission, scheduleAllNotifications]);
+
     // SEMPRE definir callbacks antes dos returns condicionais
     const addHabit = async (habit: Omit<Habit, 'id' | 'createdAt'>) => {
         try {
             await addHabitToDb(habit);
             setIsModalOpen(false);
             setCurrentView('dashboard');
-            setToast({ message: `Hábito "${habit.name}" criado com sucesso! 🎉`, type: 'success', visible: true });
         } catch (error) {
             console.error('Erro ao adicionar hábito:', error);
             setToast({ message: 'Erro ao adicionar hábito. Tente novamente.', type: 'error', visible: true });
@@ -90,7 +105,6 @@ const App: React.FC = () => {
         if (window.confirm("Você tem certeza que quer deletar este hábito? Todo o progresso será perdido.")) {
             try {
                 await deleteHabitFromDb(habitId);
-                setToast({ message: `Hábito "${habit?.name}" removido com sucesso!`, type: 'success', visible: true });
             } catch (error) {
                 console.error('Erro ao deletar hábito:', error);
                 setToast({ message: 'Erro ao deletar hábito. Tente novamente.', type: 'error', visible: true });
@@ -99,25 +113,22 @@ const App: React.FC = () => {
     }, [deleteHabitFromDb, habits]);
 
     const toggleCompletion = useCallback(async (habitId: string, value?: number) => {
-        const habit = habits.find(h => h.id === habitId);
         try {
             await toggleCompletionInDb(habitId, value);
-            const todayStr = new Date().toISOString().split('T')[0];
-            const todayCompletions = completions.filter(c => c.habitId === habitId && c.date === todayStr);
-            const isCompleted = habit?.type === 'boolean' 
-                ? todayCompletions.length > 0
-                : habit?.targetValue ? (todayCompletions.reduce((sum, c) => sum + (c.value || 0), 0) >= habit.targetValue) : false;
-            
-            if (isCompleted) {
-                setToast({ message: `Parabéns! "${habit?.name}" concluído! 🎉`, type: 'success', visible: true });
-            } else {
-                setToast({ message: `Progresso atualizado em "${habit?.name}"!`, type: 'info', visible: true });
-            }
         } catch (error) {
             console.error('Erro ao toggle conclusão:', error);
             setToast({ message: 'Erro ao atualizar conclusão. Tente novamente.', type: 'error', visible: true });
         }
-    }, [toggleCompletionInDb, habits, completions]);
+    }, [toggleCompletionInDb]);
+
+    const updateHabit = useCallback(async (habitId: string, updates: Partial<Habit>) => {
+        try {
+            await updateHabitInDb(habitId, updates);
+        } catch (error) {
+            console.error('Erro ao atualizar hábito:', error);
+            setToast({ message: 'Erro ao atualizar hábito. Tente novamente.', type: 'error', visible: true });
+        }
+    }, [updateHabitInDb]);
 
     // Se há erro de configuração, mostrar tela de erro
     if (authError) {
@@ -213,7 +224,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
                     <>
                         <WeekView habits={habits} completions={completions} />
                         <StatsCards habits={habits} completions={completions} />
-                        <HabitList habits={habits} completions={completions} onToggle={toggleCompletion} onDelete={deleteHabit} />
+                        <HabitList habits={habits} completions={completions} onToggle={toggleCompletion} onDelete={deleteHabit} onUpdate={updateHabit} />
                     </>
                 );
         }
@@ -242,7 +253,28 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
                 isVisible={toast.visible}
                 onClose={() => setToast(prev => ({ ...prev, visible: false }))}
             />
-            <UserProfile user={user} onSignOut={signOut} />
+            
+            {showNotificationSettings && (
+                <NotificationSettings onClose={() => setShowNotificationSettings(false)} />
+            )}
+
+            {/* Botão flutuante de notificações */}
+            {isSupported && permission !== 'granted' && (
+                <button
+                    onClick={() => setShowNotificationSettings(true)}
+                    className="fixed bottom-24 right-4 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 z-30 flex items-center gap-2 group"
+                    title="Ativar Notificações"
+                >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                    </svg>
+                    <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-medium">
+                        Ativar Lembretes
+                    </span>
+                </button>
+            )}
+
+            <UserProfile user={user} onSignOut={signOut} onOpenNotifications={() => setShowNotificationSettings(true)} />
             <PWAInstaller />
             <BottomNav 
                 currentView={currentView} 

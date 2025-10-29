@@ -147,12 +147,13 @@ const CompactMonthCalendar: React.FC<{habits: Habit[]; completions: Completion[]
                     const percent = dayCompletionMap.get(dateStr) || 0;
                     const isToday = dateStr === todayStr;
                     return (
-                        <div key={dateStr} className={`h-10 rounded-full flex items-center justify-center border ${isToday ? 'border-teal-400 text-white' : 'border-slate-700 text-slate-300'} relative`}
-                            title={`${percent.toFixed(0)}%`}>
-                            <span className="text-sm">{d.getDate()}</span>
-                            {percent > 0 && (
-                                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: percent === 100 ? '#22c55e' : '#64748b' }} />
-                            )}
+                        <div key={dateStr} className={`relative flex items-center justify-center min-h-[3rem]`}>
+                            <span className={`text-sm font-medium z-10 ${isToday ? 'text-teal-400' : 'text-slate-300'}`}>
+                                {d.getDate()}
+                            </span>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <ProgressCircle progress={percent} isToday={isToday} size="small" />
+                            </div>
                         </div>
                     );
                 })}
@@ -233,6 +234,47 @@ const Donut: React.FC<{ value: number }> = ({ value }) => {
                 />
             </g>
         </svg>
+    );
+};
+
+interface ProgressCircleProps {
+    progress: number;
+    isToday: boolean;
+    size?: 'small' | 'medium';
+}
+
+const ProgressCircle: React.FC<ProgressCircleProps> = ({ progress, isToday, size = 'small' }) => {
+    const dimensions = size === 'small' ? { radius: 16, stroke: 3.5, size: 36 } : { radius: 30, stroke: 4, size: 64 };
+    const circumference = 2 * Math.PI * dimensions.radius;
+    const offset = circumference - (progress / 100) * circumference;
+    
+    return (
+        <div className="relative" style={{ width: `${dimensions.size}px`, height: `${dimensions.size}px` }}>
+            <svg width={dimensions.size} height={dimensions.size} className="transform -rotate-90">
+                <circle
+                    cx={dimensions.size / 2}
+                    cy={dimensions.size / 2}
+                    r={dimensions.radius}
+                    fill="none"
+                    stroke="#334155"
+                    strokeWidth={dimensions.stroke}
+                />
+                {progress > 0 && (
+                    <circle
+                        cx={dimensions.size / 2}
+                        cy={dimensions.size / 2}
+                        r={dimensions.radius}
+                        fill="none"
+                        stroke={progress === 100 ? '#22c55e' : '#14b8a6'}
+                        strokeWidth={dimensions.stroke}
+                        strokeDasharray={circumference}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+                    />
+                )}
+            </svg>
+        </div>
     );
 };
 

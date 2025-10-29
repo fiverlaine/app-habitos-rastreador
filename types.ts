@@ -16,6 +16,8 @@ export type HabitUnit =
     | 'copos'
     | 'vezes';
 
+export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'anytime';
+
 export interface Habit {
     id: string;
     name: string;
@@ -25,6 +27,9 @@ export interface Habit {
     type: HabitType;
     unit?: HabitUnit;
     targetValue?: number; // Meta diária para hábitos numéricos
+    scheduledTimes?: string[]; // Horários para lembretes (formato HH:MM)
+    timeOfDay?: TimeOfDay; // Período do dia recomendado
+    reminderEnabled?: boolean; // Se lembretes estão ativos
 }
 
 export interface Completion {

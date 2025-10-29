@@ -67,6 +67,9 @@ export const useSupabaseData = (user: User | null) => {
         type: h.type,
         unit: h.unit || undefined,
         targetValue: h.target_value || undefined,
+        scheduledTimes: h.scheduled_times || [],
+        timeOfDay: h.time_of_day || 'anytime',
+        reminderEnabled: h.reminder_enabled !== false, // default true
       }));
 
       const mappedCompletions: Completion[] = (completionsData || []).map(c => ({
@@ -106,6 +109,9 @@ export const useSupabaseData = (user: User | null) => {
           type: habit.type,
           unit: habit.unit || null,
           target_value: habit.targetValue || null,
+          scheduled_times: habit.scheduledTimes || [],
+          time_of_day: habit.timeOfDay || 'anytime',
+          reminder_enabled: habit.reminderEnabled !== false,
         })
         .select()
         .single();
@@ -121,6 +127,9 @@ export const useSupabaseData = (user: User | null) => {
         type: data.type,
         unit: data.unit || undefined,
         targetValue: data.target_value || undefined,
+        scheduledTimes: data.scheduled_times || [],
+        timeOfDay: data.time_of_day || 'anytime',
+        reminderEnabled: data.reminder_enabled !== false,
       };
 
       setHabits(prev => [newHabit, ...prev]);
@@ -201,29 +210,49 @@ export const useSupabaseData = (user: User | null) => {
 
           setCompletions(prev => [...prev, newCompletion]);
         }
-      } else if (habit.type === 'numeric' && value !== undefined) {
-        // Adicionar valor numérico
-        const { data, error } = await supabase
-          .from('completions')
-          .insert({
-            user_id: user.id,
-            habit_id: habitId,
-            date: todayStr,
-            value,
-          })
-          .select()
-          .single();
+      } else if (habit.type === 'numeric') {
+        if (value !== undefined) {
+          // Adicionar valor numérico
+          const { data, error } = await supabase
+            .from('completions')
+            .insert({
+              user_id: user.id,
+              habit_id: habitId,
+              date: todayStr,
+              value,
+            })
+            .select()
+            .single();
 
-        if (error) throw error;
+          if (error) throw error;
 
-        const newCompletion: Completion = {
-          id: data.id,
-          habitId: data.habit_id,
-          date: data.date,
-          value: data.value || undefined,
-        };
+          const newCompletion: Completion = {
+            id: data.id,
+            habitId: data.habit_id,
+            date: data.date,
+            value: data.value || undefined,
+          };
 
-        setCompletions(prev => [...prev, newCompletion]);
+          setCompletions(prev => [...prev, newCompletion]);
+        } else {
+          // Se chamado sem valor, é um toggle - remover todas as conclusões do dia
+          const todayCompletions = completions.filter(
+            c => c.habitId === habitId && c.date === todayStr
+          );
+
+          if (todayCompletions.length > 0) {
+            // Remover todas as conclusões de hoje
+            const { error } = await supabase
+              .from('completions')
+              .delete()
+              .in('id', todayCompletions.map(c => c.id))
+              .eq('user_id', user.id);
+
+            if (error) throw error;
+
+            setCompletions(prev => prev.filter(c => !todayCompletions.some(tc => tc.id === c.id)));
+          }
+        }
       }
     } catch (error) {
       console.error('Erro ao toggle conclusão:', error);
@@ -256,6 +285,40 @@ export const useSupabaseData = (user: User | null) => {
     }
   }, [user, unlockedAchievements]);
 
+  // Atualizar hábito
+  const updateHabit = useCallback(async (habitId: string, updates: Partial<Habit>) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .update({
+          name: updates.name,
+          icon: updates.icon,
+          color: updates.color,
+          type: updates.type,
+          unit: updates.unit || null,
+          target_value: updates.targetValue || null,
+          scheduled_times: updates.scheduledTimes,
+          time_of_day: updates.timeOfDay,
+          reminder_enabled: updates.reminderEnabled,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', habitId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setHabits(prev => prev.map(h => 
+        h.id === habitId ? { ...h, ...updates } : h
+      ));
+    } catch (error) {
+      console.error('Erro ao atualizar hábito:', error);
+      throw error;
+    }
+  }, [user]);
+
   return {
     habits,
     completions,
@@ -264,9 +327,9 @@ export const useSupabaseData = (user: User | null) => {
     error,
     addHabit,
     deleteHabit,
+    updateHabit,
     toggleCompletion,
     addAchievement,
-    refreshData: loadData,
   };
 };
 

@@ -45,6 +45,9 @@ export interface Database {
           type: 'boolean' | 'numeric'
           unit: string | null
           target_value: number | null
+          scheduled_times: string[]
+          time_of_day: 'morning' | 'afternoon' | 'evening' | 'anytime'
+          reminder_enabled: boolean
           created_at: string
           updated_at: string
         }
@@ -57,6 +60,9 @@ export interface Database {
           type: 'boolean' | 'numeric'
           unit?: string | null
           target_value?: number | null
+          scheduled_times?: string[]
+          time_of_day?: 'morning' | 'afternoon' | 'evening' | 'anytime'
+          reminder_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -69,6 +75,9 @@ export interface Database {
           type?: 'boolean' | 'numeric'
           unit?: string | null
           target_value?: number | null
+          scheduled_times?: string[]
+          time_of_day?: 'morning' | 'afternoon' | 'evening' | 'anytime'
+          reminder_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
