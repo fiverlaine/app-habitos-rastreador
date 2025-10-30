@@ -1,7 +1,14 @@
+
 import type { HabitUnit, TimeOfDay } from './types';
 
-export const HABIT_ICONS = ['Book', 'Water', 'Dumbbell', 'Run', 'Code', 'Meditate', 'Fruit'] as const;
+export const HABIT_ICONS = ['Book', 'Water', 'Dumbbell', 'Run', 'Code', 'Meditate', 'Fruit'];
 
+export const TIME_OF_DAY_OPTIONS: { value: TimeOfDay; label: string; icon: string; description: string }[] = [
+    { value: 'morning', label: 'Manhã', icon: '🌅', description: '6h - 12h' },
+    { value: 'afternoon', label: 'Tarde', icon: '☀️', description: '12h - 18h' },
+    { value: 'evening', label: 'Noite', icon: '🌙', description: '18h - 0h' },
+    { value: 'anytime', label: 'Qualquer hora', icon: '⏰', description: 'Sem preferência' },
+];
 export const HABIT_COLORS = [
     'bg-red-500',
     'bg-orange-500',
@@ -12,16 +19,9 @@ export const HABIT_COLORS = [
     'bg-indigo-500',
     'bg-purple-500',
     'bg-pink-500',
-] as const;
-
-export const TIME_OF_DAY_OPTIONS: Array<{ value: TimeOfDay; label: string; icon: string; description: string }> = [
-    { value: 'morning', label: 'Manhã', icon: '🌅', description: '6h - 12h' },
-    { value: 'afternoon', label: 'Tarde', icon: '☀️', description: '12h - 18h' },
-    { value: 'evening', label: 'Noite', icon: '🌙', description: '18h - 0h' },
-    { value: 'anytime', label: 'Qualquer hora', icon: '⏰', description: 'Sem preferência' },
 ];
 
-export const HABIT_UNITS: Array<{ value: HabitUnit; label: string }> = [
+export const HABIT_UNITS: { value: HabitUnit; label: string }[] = [
     { value: 'none', label: 'Nenhuma' },
     { value: 'litros', label: 'Litros' },
     { value: 'ml', label: 'Mililitros' },
