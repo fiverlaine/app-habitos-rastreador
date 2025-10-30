@@ -54,8 +54,11 @@ const App: React.FC = () => {
     const {
         permission,
         isSupported,
+        isSubscribed,
         scheduleAllNotifications,
         sendStreakReminderNotification,
+        requestPermission,
+        sendTestNotification,
     } = useNotifications(user);
 
     // Sistema de conquistas - SEMPRE chamado, mas só executa se há usuário
@@ -82,11 +85,11 @@ const App: React.FC = () => {
 
     // Agendar notificações quando os hábitos mudarem
     useEffect(() => {
-        if (!user || !isSupported || permission !== 'granted') return;
+        if (!user || !isSupported || permission !== 'granted' || !isSubscribed) return;
         
         // Agendar notificações para todos os hábitos com lembretes ativos
         scheduleAllNotifications(habits);
-    }, [habits, user, isSupported, permission, scheduleAllNotifications]);
+    }, [habits, user, isSupported, permission, isSubscribed, scheduleAllNotifications]);
 
     // SEMPRE definir callbacks antes dos returns condicionais
     const addHabit = async (habit: Omit<Habit, 'id' | 'createdAt'>) => {
@@ -255,7 +258,14 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}
             />
             
             {showNotificationSettings && (
-                <NotificationSettings onClose={() => setShowNotificationSettings(false)} />
+                <NotificationSettings 
+                    onClose={() => setShowNotificationSettings(false)}
+                    permission={permission}
+                    isSupported={isSupported}
+                    isSubscribed={isSubscribed}
+                    requestPermission={requestPermission}
+                    sendTestNotification={sendTestNotification}
+                />
             )}
 
             {/* Botão flutuante de notificações */}

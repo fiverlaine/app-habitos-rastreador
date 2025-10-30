@@ -172,6 +172,11 @@ ADD COLUMN time_of_day TEXT CHECK (time_of_day IN ('morning', 'afternoon', 'even
 ADD COLUMN reminder_enabled BOOLEAN DEFAULT true;
 ```
 
+#### Proteções Extras (30/10/2025)
+- Tabela `web_push_subscriptions` (antes `push_subscriptions`) renomeada com RLS ativada e políticas por usuário.
+- Índice único `reminder_queue_user_habit_schedule_key` garante que o mesmo lembrete não seja agendado duas vezes.
+- Utilize o novo env `VITE_VAPID_PUBLIC_KEY` para manter a chave pública VAPID sincronizada com a Edge Function.
+
 ### TypeScript Types
 
 ```typescript

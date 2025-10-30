@@ -128,6 +128,55 @@ export interface Database {
           unlocked_at?: string
         }
       }
+      web_push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string | null
+          endpoint: string
+          keys: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          endpoint: string
+          keys: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          endpoint?: string
+          keys?: Json
+          created_at?: string
+        }
+      }
+      reminder_queue: {
+        Row: {
+          id: string
+          user_id: string | null
+          habit_id: string | null
+          scheduled_at: string
+          sent: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          habit_id?: string | null
+          scheduled_at: string
+          sent?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          habit_id?: string | null
+          scheduled_at?: string
+          sent?: boolean
+          created_at?: string
+        }
+      }
     }
     Views: {}
     Functions: {}

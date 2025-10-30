@@ -1,12 +1,30 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Habit } from '../types';
 import type { User } from '@supabase/supabase-js';
 
-// URL do backend de push notifications
-// Em produção, deve ser configurada na Vercel como variável de ambiente
-const PUSH_SERVER_URL = import.meta.env.VITE_PUSH_SERVER_URL || 
-  (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001');
+const FALLBACK_VAPID_PUBLIC_KEY = 'BP4L9SbKHcdfcUTd0vNV5vbDkWNx87NKe_kgr6UptP1SYTF0IFrBhale1ZwIqP389aElq8mG4BGsf_9Oq6QT0rk';
+
+const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
+    const padding = '='.repeat((4 - (base64String.length % 4 || 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+};
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer | null): string => {
+    if (!buffer) return '';
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+};
 
 interface NotificationPermissionState {
     permission: NotificationPermission;
@@ -20,74 +38,32 @@ export const useNotifications = (user: User | null) => {
         isSupported: false,
         isSubscribed: false,
     });
-    
-    const [vapidPublicKey, setVapidPublicKey] = useState<string | null>(null);
 
-    // Buscar chave VAPID pública do backend
-    useEffect(() => {
-        const fetchVapidKey = async () => {
-            // Se não há URL configurada em produção, não tentar buscar
-            if (!PUSH_SERVER_URL || PUSH_SERVER_URL === '') {
-                console.warn('⚠️ VITE_PUSH_SERVER_URL não configurada. Notificações push não estarão disponíveis.');
-                console.warn('💡 Configure VITE_PUSH_SERVER_URL na Vercel com a URL do seu backend de push.');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${PUSH_SERVER_URL}/api/vapid-public-key`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setVapidPublicKey(data.publicKey);
-                    console.log('✅ Chave VAPID pública carregada');
-                } else {
-                    console.error('❌ Erro ao buscar chave VAPID:', response.statusText);
-                    console.warn('💡 Verifique se o backend de push está rodando e acessível.');
-                }
-            } catch (error) {
-                console.error('❌ Erro ao conectar ao servidor de push:', error);
-                if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-                    console.warn('💡 Verifique se:');
-                    console.warn('   1. O backend está rodando e acessível');
-                    console.warn('   2. A URL está correta (não use localhost em produção)');
-                    console.warn('   3. CORS está configurado no backend');
-                }
-            }
-        };
-
-        fetchVapidKey();
+    const vapidPublicKey = useMemo(() => {
+        const keyFromEnv = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+        if (keyFromEnv && keyFromEnv.trim().length > 0) {
+            return keyFromEnv.trim();
+        }
+        return FALLBACK_VAPID_PUBLIC_KEY;
     }, []);
 
     useEffect(() => {
         // Verificar se notificações são suportadas
+        // Chromium/Edge/Firefox/Opera: Notifications + Service Worker + PushManager
+        // Safari: Notifications + Service Worker (sem PushManager até iOS 16.4+)
+        // Para compatibilidade máxima, só verificamos Notification + serviceWorker
         const hasNotifications = 'Notification' in window;
         const hasServiceWorker = 'serviceWorker' in navigator;
         const hasPushManager = 'PushManager' in window;
         
-        // Verificar se é contexto seguro (HTTPS ou localhost)
-        const isSecureContext = window.isSecureContext || 
-            window.location.protocol === 'https:' ||
-            window.location.hostname === 'localhost' ||
-            window.location.hostname === '127.0.0.1' ||
-            window.location.hostname.match(/^192\.168\./); // IPs locais
-        
-        // Suporte básico: apenas notificações e service worker
-        // Push API requer contexto seguro, mas podemos tentar mesmo assim
         const isSupported = hasNotifications && hasServiceWorker;
         
         console.log('📱 Suporte a notificações:', {
             hasNotifications,
             hasServiceWorker,
             hasPushManager,
-            isSecureContext,
-            protocol: window.location.protocol,
-            hostname: window.location.hostname,
             isSupported,
         });
-        
-        // Avisar se não é contexto seguro mas permitir tentar mesmo assim
-        if (!isSecureContext && !isSupported) {
-            console.warn('⚠️ Contexto não seguro - Push pode não funcionar via IP sem HTTPS');
-        }
         
         setState(prev => ({
             ...prev,
@@ -95,11 +71,11 @@ export const useNotifications = (user: User | null) => {
             permission: isSupported ? Notification.permission : 'denied',
         }));
 
-        // Verificar se já está inscrito
-        if (isSupported && hasPushManager && user && vapidPublicKey) {
+        // Verificar se já está inscrito (só se tiver PushManager)
+        if (isSupported && hasPushManager && user) {
             checkSubscription(user);
         }
-    }, [user, vapidPublicKey]);
+    }, [user]);
 
     const checkSubscription = async (user: User) => {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -113,11 +89,15 @@ export const useNotifications = (user: User | null) => {
                 subscription = await registration.pushManager.getSubscription();
             }
             
-            const { data } = await supabase
-                .from('push_subscriptions')
+            const { data, error } = await supabase
+                .from('web_push_subscriptions')
                 .select('id')
                 .eq('user_id', user.id)
                 .limit(1);
+
+            if (error) {
+                console.error('Erro ao consultar subscriptions:', error);
+            }
             
             setState(prev => ({ ...prev, isSubscribed: (subscription !== null && data && data.length > 0) }));
         } catch (err) {
@@ -128,17 +108,6 @@ export const useNotifications = (user: User | null) => {
     const requestPermission = useCallback(async (): Promise<boolean> => {
         if (!state.isSupported || !user) {
             console.warn('Notificações não são suportadas ou usuário não logado');
-            return false;
-        }
-
-        if (!vapidPublicKey) {
-            console.error('❌ Chave VAPID não carregada.');
-            if (!PUSH_SERVER_URL || PUSH_SERVER_URL === '') {
-                console.error('💡 Configure VITE_PUSH_SERVER_URL na Vercel (Settings > Environment Variables)');
-                console.error('💡 Deploy o backend primeiro em Railway/Render e depois configure a URL');
-            } else {
-                console.error('💡 Verifique se o servidor de push está rodando em:', PUSH_SERVER_URL);
-            }
             return false;
         }
 
@@ -156,21 +125,20 @@ export const useNotifications = (user: User | null) => {
 
             // Verificar se navegador suporta PushManager (Chrome, Firefox, Edge)
             if ('PushManager' in window) {
-                try {
                 // Registrar subscription push
                 const registration = await navigator.serviceWorker.ready;
                 
-                    // Converter chave VAPID para Uint8Array
-                    const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+                // IMPORTANTE: Usar VAPID public key do servidor
+                const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
                 
-                    const subscription = await registration.pushManager.subscribe({
+                try {
+                    const existing = await registration.pushManager.getSubscription();
+                    const subscription = existing ?? await registration.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey,
                     });
 
-                    console.log('✅ Push subscription criada');
-
-                    // Preparar objeto de subscription
+                    // Salvar subscription no Supabase
                     const subscriptionObj = {
                         endpoint: subscription.endpoint,
                         keys: {
@@ -179,31 +147,30 @@ export const useNotifications = (user: User | null) => {
                         },
                     };
 
-                    // Enviar subscription para o backend
-                    const response = await fetch(`${PUSH_SERVER_URL}/api/subscribe`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            userId: user.id,
-                            subscription: subscriptionObj,
-                        }),
+                    const { error } = await supabase
+                        .from('web_push_subscriptions')
+                        .upsert({
+                            user_id: user.id,
+                            endpoint: subscription.endpoint,
+                            keys: subscriptionObj.keys,
+                        }, {
+                            onConflict: 'endpoint'
                         });
 
-                    if (!response.ok) {
-                        throw new Error('Erro ao registrar subscription no servidor');
+                    if (error && error.code !== '23505') {
+                        console.error('Erro ao salvar subscription:', error);
+                        return false;
                     }
 
                     setState(prev => ({ ...prev, isSubscribed: true }));
-                    console.log('✅ Subscription push registrada com sucesso!');
+                    console.log('✅ Subscription push salva!');
                 } catch (pushError) {
-                    console.error('⚠️ Erro ao configurar Push:', pushError);
+                    console.warn('⚠️ PushManager não disponível ou erro:', pushError);
                     // Mesmo sem Push, notificações locais ainda funcionam
-                    console.log('✅ Notificações locais ativadas (sem push remoto)');
+                    console.log('✅ Notificações locais ativadas (sem push)');
                 }
             } else {
-                console.log('📱 Navegador não suporta Push API');
+                console.log('📱 Navegador não suporta Push API (ex: Safari antigo)');
                 console.log('✅ Notificações locais ainda funcionam');
             }
 
@@ -212,34 +179,7 @@ export const useNotifications = (user: User | null) => {
             console.error('Erro ao solicitar permissão:', error);
             return false;
         }
-    }, [state.isSupported, user, vapidPublicKey]);
-
-    // Helper para converter ArrayBuffer para Base64
-    const arrayBufferToBase64 = (buffer: ArrayBuffer | null): string => {
-        if (!buffer) return '';
-        const bytes = new Uint8Array(buffer);
-        let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return btoa(binary);
-    };
-
-    // Helper para converter chave VAPID de base64 para Uint8Array
-    const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding)
-            .replace(/-/g, '+')
-            .replace(/_/g, '/');
-
-        const rawData = window.atob(base64);
-        const outputArray = new Uint8Array(rawData.length);
-
-        for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i);
-        }
-        return outputArray;
-    };
+    }, [state.isSupported, user]);
 
     const scheduleNotification = useCallback(async (habit: Habit) => {
         if (!state.isSupported || state.permission !== 'granted' || !user) {
@@ -273,7 +213,7 @@ export const useNotifications = (user: User | null) => {
                         sent: false,
                     });
 
-                if (error && !error.message.includes('duplicate')) {
+                if (error && error.code !== '23505') {
                     console.error('Erro ao agendar lembrete:', error);
                 }
             }
@@ -290,10 +230,8 @@ export const useNotifications = (user: User | null) => {
         }
 
         const habitsWithReminders = habits.filter(h => h.reminderEnabled && h.scheduledTimes && h.scheduledTimes.length > 0);
-        
-        for (const habit of habitsWithReminders) {
-            await scheduleNotification(habit);
-        }
+
+        await Promise.all(habitsWithReminders.map(scheduleNotification));
     }, [state.permission, scheduleNotification]);
 
     const sendTestNotification = useCallback(async (habitName: string = 'Teste') => {
@@ -346,6 +284,7 @@ export const useNotifications = (user: User | null) => {
         scheduleAllNotifications,
         sendTestNotification,
         sendStreakReminderNotification,
+        vapidPublicKey,
     };
 };
 

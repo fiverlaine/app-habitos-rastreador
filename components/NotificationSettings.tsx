@@ -1,31 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BellIcon, BellSlashIcon, XIcon } from './icons';
-import { useNotifications } from '../hooks/useNotifications';
 
 interface NotificationSettingsProps {
     onClose: () => void;
+    permission: NotificationPermission;
+    isSupported: boolean;
+    isSubscribed: boolean;
+    requestPermission: () => Promise<boolean>;
+    sendTestNotification: (habitName?: string) => Promise<boolean>;
 }
 
-const NotificationSettings: React.FC<NotificationSettingsProps> = ({ onClose }) => {
-    const PUSH_SERVER_URL = import.meta.env.VITE_PUSH_SERVER_URL || '';
-    const isBackendConfigured = PUSH_SERVER_URL !== '' && !PUSH_SERVER_URL.includes('localhost');
-    
-    const { 
-        permission, 
-        isSupported, 
-        requestPermission, 
-        sendTestNotification 
-    } = useNotifications();
-
+const NotificationSettings: React.FC<NotificationSettingsProps> = ({
+    onClose,
+    permission,
+    isSupported,
+    isSubscribed,
+    requestPermission,
+    sendTestNotification,
+}) => {
     const [testSent, setTestSent] = useState(false);
+    const [isRequestingPermission, setIsRequestingPermission] = useState(false);
 
     const handleRequestPermission = async () => {
-        const granted = await requestPermission();
-        if (granted) {
-            // Enviar notificação de teste
-            await sendTestNotification('Notificações Ativadas!');
-            setTestSent(true);
-            setTimeout(() => setTestSent(false), 3000);
+        if (isRequestingPermission) return;
+        setIsRequestingPermission(true);
+        try {
+            const granted = await requestPermission();
+            if (granted) {
+                await sendTestNotification('Notificações Ativadas!');
+                setTestSent(true);
+                setTimeout(() => setTestSent(false), 3000);
+            }
+        } finally {
+            setIsRequestingPermission(false);
         }
     };
 
@@ -40,11 +47,19 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ onClose }) 
     const getPermissionStatus = () => {
         switch (permission) {
             case 'granted':
+                if (isSubscribed) {
+                    return {
+                        icon: <BellIcon className="w-12 h-12 text-green-500" />,
+                        title: 'Notificações Ativadas',
+                        description: 'Lembretes push configurados com sucesso neste dispositivo.',
+                        color: 'text-green-500',
+                    };
+                }
                 return {
-                    icon: <BellIcon className="w-12 h-12 text-green-500" />,
-                    title: 'Notificações Ativadas',
-                    description: 'Você receberá lembretes nos horários configurados.',
-                    color: 'text-green-500',
+                    icon: <BellIcon className="w-12 h-12 text-yellow-400" />,
+                    title: 'Permissão concedida, finalize a configuração',
+                    description: 'Precisamos concluir o registro push neste dispositivo. Clique em "Enviar Notificação de Teste" para validar.',
+                    color: 'text-yellow-400',
                 };
             case 'denied':
                 return {
@@ -79,24 +94,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ onClose }) 
                     <div className="text-center py-8">
                         <BellSlashIcon className="w-16 h-16 text-slate-500 mx-auto mb-4" />
                         <p className="text-slate-300 mb-2">Notificações não suportadas</p>
-                        <p className="text-slate-400 text-sm mb-4">
+                        <p className="text-slate-400 text-sm">
                             Seu navegador não suporta notificações push. Tente usar um navegador moderno como Chrome, Firefox ou Safari.
                         </p>
-                        <div className="bg-slate-700/50 rounded-lg p-4 text-left text-xs">
-                            <p className="text-slate-300 mb-2 font-semibold">💡 Informações de Debug:</p>
-                            <ul className="text-slate-400 space-y-1">
-                                <li>Protocolo: <code className="text-teal-400">{window.location.protocol}</code></li>
-                                <li>Hostname: <code className="text-teal-400">{window.location.hostname}</code></li>
-                                <li>Service Worker: <code className="text-teal-400">{'serviceWorker' in navigator ? '✅' : '❌'}</code></li>
-                                <li>Notifications: <code className="text-teal-400">{'Notification' in window ? '✅' : '❌'}</code></li>
-                                <li>PushManager: <code className="text-teal-400">{'PushManager' in window ? '✅' : '❌'}</code></li>
-                            </ul>
-                            {window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && (
-                                <p className="text-yellow-400 mt-3 font-semibold">
-                                    ⚠️ Acesso via IP sem HTTPS pode limitar funcionalidades. Use localhost ou configure HTTPS.
-                                </p>
-                            )}
-                        </div>
                     </div>
                 </div>
             </div>
@@ -139,28 +139,20 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ onClose }) 
                         </ul>
                     </div>
 
-                    {!isBackendConfigured && (
-                        <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/30">
-                            <p className="text-yellow-400 text-sm mb-2 font-semibold">⚠️ Backend não configurado</p>
-                            <p className="text-xs text-slate-300 mb-2">
-                                Para usar notificações push, você precisa:
-                            </p>
-                            <ol className="text-xs text-slate-300 space-y-1 ml-4 list-decimal">
-                                <li>Deployar o backend em Railway/Render</li>
-                                <li>Configurar VITE_PUSH_SERVER_URL na Vercel</li>
-                                <li>Recarregar a aplicação</li>
-                            </ol>
-                            <p className="text-xs text-slate-400 mt-2">
-                                Por enquanto, apenas notificações locais estão disponíveis.
-                            </p>
-                        </div>
-                    )}
-
-                    {permission === 'granted' && isBackendConfigured && (
+                    {permission === 'granted' && isSubscribed && (
                         <div className="bg-teal-500/10 rounded-lg p-4 border border-teal-500/30">
                             <p className="text-teal-400 text-sm flex items-center gap-2">
                                 <span>✅</span>
                                 Para configurar horários específicos, edite cada hábito individualmente.
+                            </p>
+                        </div>
+                    )}
+
+                    {permission === 'granted' && !isSubscribed && (
+                        <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/40">
+                            <p className="text-amber-300 text-sm flex items-center gap-2">
+                                <span>⚠️</span>
+                                Concessão realizada, mas ainda não registramos este dispositivo. Envie uma notificação de teste para concluir o registro.
                             </p>
                         </div>
                     )}
@@ -183,16 +175,11 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ onClose }) 
                     {permission === 'default' && (
                         <button
                             onClick={handleRequestPermission}
-                            disabled={!isBackendConfigured}
-                            className={`w-full font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                                isBackendConfigured
-                                    ? 'bg-teal-600 hover:bg-teal-500 text-white'
-                                    : 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                            }`}
-                            title={!isBackendConfigured ? 'Configure o backend primeiro' : ''}
+                            className={`w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${isRequestingPermission ? 'opacity-75 cursor-not-allowed' : ''}`}
+                            disabled={isRequestingPermission}
                         >
                             <BellIcon className="w-5 h-5" />
-                            {isBackendConfigured ? 'Ativar Notificações' : 'Backend não configurado'}
+                            {isRequestingPermission ? 'Solicitando permissão...' : 'Ativar Notificações'}
                         </button>
                     )}
 

@@ -3,8 +3,8 @@
 ## ✅ O Que Já Está Implementado
 
 ### 1. **Banco de Dados** ✅
-- Tabela `push_subscriptions` - armazena inscrições push dos usuários
-- Tabela `reminder_queue` - fila de lembretes a enviar
+- Tabela `web_push_subscriptions` - armazena inscrições push dos usuários com RLS ativada
+- Tabela `reminder_queue` - fila de lembretes a enviar (com índice único por usuário/hábito/horário)
 - Função SQL `schedule_habit_reminders()` - agenda lembretes
 - Migration aplicada com sucesso ✅
 
@@ -69,9 +69,9 @@ Se você gerar novas chaves VAPID, você precisa:
    - `VAPID_PUBLIC_KEY` = Sua chave pública
    - `VAPID_PRIVATE_KEY` = Sua chave privada
 
-3. **Atualizar no front-end** (`hooks/useNotifications.ts`):
-```typescript
-const VAPID_PUBLIC_KEY = "SUA_CHAVE_PUBLICA_AQUI";
+3. **Atualizar o front-end** (`.env.local`):
+```env
+VITE_VAPID_PUBLIC_KEY="SUA_CHAVE_PUBLICA_AQUI"
 ```
 
 ---
@@ -82,7 +82,7 @@ const VAPID_PUBLIC_KEY = "SUA_CHAVE_PUBLICA_AQUI";
 1. Abra o app no navegador
 2. Clique no botão "Ativar Lembretes" (flutuante ou Perfil)
 3. Permita notificações no popup
-4. ✅ Subscription será salva no banco
+4. ✅ Subscription será salva em `web_push_subscriptions`
 
 ### **Teste 2: Criar Hábito com Horário**
 1. Crie um hábito (ex: "Beber água")
@@ -136,7 +136,7 @@ SELECT cron.schedule(
 ### **"Notificações não chegam no celular"**
 
 ✅ **Verificar**:
-1. Subscription está salva? (`SELECT * FROM push_subscriptions;`)
+1. Subscription está salva? (`SELECT * FROM web_push_subscriptions;`)
 2. Lembretes estão na fila? (`SELECT * FROM reminder_queue;`)
 3. Edge Function está rodando? (Dashboard → Edge Functions → Logs)
 4. Service Worker está registrado? (DevTools → Application → Service Workers)
@@ -160,7 +160,7 @@ SELECT cron.schedule(
 ## 📊 Status Atual
 
 - ✅ Banco de dados configurado
-- ✅ Tabelas criadas (`push_subscriptions`, `reminder_queue`)
+- ✅ Tabelas criadas (`web_push_subscriptions`, `reminder_queue`)
 - ✅ Edge Function deployada
 - ✅ Front-end registrando subscriptions
 - ✅ Service Worker ouvindo pushes
@@ -183,6 +183,6 @@ Quando tudo estiver configurado:
 
 ---
 
-**Última atualização**: 28 de Outubro de 2025  
+**Última atualização**: 30 de Outubro de 2025  
 **Status**: ✅ Pronto para produção (após configurar chaves VAPID)
 

@@ -10,7 +10,6 @@ Um aplicativo moderno e intuitivo para rastrear hábitos diários, construído c
 - 📅 **Visualização por Semana**: Acompanhe seu progresso semanal
 - 🎨 **Personalização**: Escolha ícones e cores para seus hábitos
 - 📱 **PWA**: Funciona offline e pode ser instalado como app no iPhone
-- 🔔 **Notificações Push**: Lembretes programados para seus hábitos (mesmo com app fechado!)
 - 🔐 **Autenticação**: Sistema completo de login/cadastro
 - ☁️ **Backend**: Supabase com PostgreSQL
 
@@ -32,7 +31,6 @@ Um aplicativo moderno e intuitivo para rastrear hábitos diários, construído c
 - 📊 Estatísticas detalhadas
 - 📅 Visualização por calendário
 - 🎨 Personalização de aparência
-- 🔔 Notificações push programáveis com Web Push API
 - 🔐 Autenticação segura
 - 📱 Instalação como app nativo no iPhone
 
@@ -69,6 +67,7 @@ Crie um arquivo `.env.local`:
 ```env
 VITE_SUPABASE_URL=sua_url_do_supabase
 VITE_SUPABASE_ANON_KEY=sua_chave_anonima
+VITE_VAPID_PUBLIC_KEY=sua_chave_vapid_publica
 ```
 
 ### Supabase Setup
@@ -79,11 +78,9 @@ VITE_SUPABASE_ANON_KEY=sua_chave_anonima
 
 ## 📖 Documentação
 
-- 🔔 **[Configurar Notificações Push](SETUP_PUSH_NOTIFICACOES.md)** ← NOVO!
-- 📱 [Guia de Instalação iOS](GUIA_INSTALACAO_iOS.md)
-- ☁️ [Integração Supabase](documentation/INTEGRACAO_SUPABASE.md)
-- 🛠️ [Guia Técnico](documentation/GUIA_TECNICO.md)
-- 🔔 [Documentação Completa de Push](documentation/PUSH_NOTIFICATIONS_COMPLETE.md)
+- [Guia de Instalação iOS](GUIA_INSTALACAO_iOS.md)
+- [Integração Supabase](documentation/INTEGRACAO_SUPABASE.md)
+- [Guia Técnico](documentation/GUIA_TECNICO.md)
 
 ## 🎨 Screenshots
 

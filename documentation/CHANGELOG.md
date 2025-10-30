@@ -1,5 +1,22 @@
 # Changelog - App de Hábitos
 
+# Changelog - App de Hábitos
+
+## [2.0.1] - 2025-10-30
+
+### 🔔 Push Notifications Refinadas
+- Alinhamento da coleção `web_push_subscriptions` com RLS ativada e políticas por usuário
+- Índice único em `reminder_queue` evita duplicidade de lembretes por hábito/horário
+- `useNotifications` agora utiliza chave VAPID configurável via `VITE_VAPID_PUBLIC_KEY`
+- Correção no `NotificationSettings` para reutilizar o mesmo estado de notificações do app
+- Conversão de chave VAPID em `Uint8Array`, garantindo compatibilidade com `PushManager.subscribe`
+- Ajuste nos testes e documentação para o novo fluxo de configuração (.env + Edge Function)
+
+### 🛠️ Infraestrutura
+- Nova migração `20251030153000_push_notifications_alignment.sql`
+- Atualização da tabela `web_push_subscriptions` (antes `push_subscriptions`) e políticas `authenticated`
+- Documentação revisada (`PUSH_NOTIFICATIONS_SETUP.md`, `PUSH_CONFIG_INSTRUCTIONS.md`)
+
 ## [2.0.0] - 2025-10-08
 
 ### ✨ Novos Recursos

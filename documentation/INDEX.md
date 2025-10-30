@@ -2,21 +2,6 @@
 
 Bem-vindo à documentação completa do App de Hábitos! Esta pasta contém toda a informação necessária para entender, usar e desenvolver o aplicativo.
 
-## 🔔 NOVO: Notificações Push!
-
-### Guias Rápidos
-- **[⚡ Setup em 15 minutos](../SETUP_PUSH_NOTIFICACOES.md)** - Configure notificações push rapidamente
-- **[📖 Documentação Completa](PUSH_NOTIFICATIONS_COMPLETE.md)** - Guia detalhado passo a passo
-- **[⚡ Comandos Rápidos](../COMANDOS_RAPIDOS.md)** - Referência de comandos e troubleshooting
-
-### Componentes do Sistema
-- **Backend**: `server/` - Node.js com Web Push API
-- **Edge Function**: `supabase/functions/process-reminders/` - Processador de fila
-- **Service Worker**: `public/sw.js` - Gerenciamento de notificações
-- **Hook**: `hooks/useNotifications.ts` - Lógica de subscription
-
----
-
 ## 📂 Estrutura da Documentação
 
 ### 1. 📖 [README.md](./README.md)
@@ -105,6 +90,19 @@ Contém:
 - Resumo das melhorias
 
 **Para quem?** Designers, PMs e pessoas visuais
+
+---
+
+### 5. 🔔 [PUSH_NOTIFICATIONS_SETUP.md](./PUSH_NOTIFICATIONS_SETUP.md)
+**Guia de Configuração de Push Notifications**
+
+Contém:
+- Pipeline completo (frontend, Edge Function, tabelas Supabase)
+- Passo a passo de geração e configuração das chaves VAPID
+- Consultas para validar `web_push_subscriptions` e `reminder_queue`
+- Troubleshooting e checklist de produção
+
+**Para quem?** Devs que precisam ativar/depurar notificações push
 
 ---
 
