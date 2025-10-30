@@ -16,16 +16,6 @@ const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
     return outputArray;
 };
 
-const arrayBufferToBase64 = (buffer: ArrayBuffer | null): string => {
-    if (!buffer) return '';
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-};
-
 interface NotificationPermissionState {
     permission: NotificationPermission;
     isSupported: boolean;
@@ -47,48 +37,39 @@ export const useNotifications = (user: User | null) => {
         return FALLBACK_VAPID_PUBLIC_KEY;
     }, []);
 
-    useEffect(() => {
-        // Verificar se notificações são suportadas
-        // Chromium/Edge/Firefox/Opera: Notifications + Service Worker + PushManager
-        // Safari: Notifications + Service Worker (sem PushManager até iOS 16.4+)
-        // Para compatibilidade máxima, só verificamos Notification + serviceWorker
-        const hasNotifications = 'Notification' in window;
-        const hasServiceWorker = 'serviceWorker' in navigator;
-        const hasPushManager = 'PushManager' in window;
-        
-        const isSupported = hasNotifications && hasServiceWorker;
-        
-        console.log('📱 Suporte a notificações:', {
-            hasNotifications,
-            hasServiceWorker,
-            hasPushManager,
-            isSupported,
-        });
-        
-        setState(prev => ({
-            ...prev,
-            isSupported,
-            permission: isSupported ? Notification.permission : 'denied',
-        }));
-
-        // Verificar se já está inscrito (só se tiver PushManager)
-        if (isSupported && hasPushManager && user) {
-            checkSubscription(user);
+    const getServiceWorkerRegistration = useCallback(async (): Promise<ServiceWorkerRegistration | null> => {
+        if (!('serviceWorker' in navigator)) {
+            return null;
         }
-    }, [user]);
 
-    const checkSubscription = async (user: User) => {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        
         try {
-            const registration = await navigator.serviceWorker.ready;
-            
-            // Verificar subscription apenas se PushManager existe
-            let subscription = null;
-            if (registration.pushManager) {
-                subscription = await registration.pushManager.getSubscription();
+            return await navigator.serviceWorker.ready;
+        } catch (error) {
+            console.error('Erro ao recuperar registration do service worker:', error);
+            return null;
+        }
+    }, []);
+
+    const checkSubscription = useCallback(async () => {
+        if (!user) {
+            setState(prev => ({ ...prev, isSubscribed: false }));
+            return { hasDbSubscription: false, hasLocalSubscription: false };
+        }
+
+        try {
+            const registration = await getServiceWorkerRegistration();
+            const hasPushManager = Boolean(registration?.pushManager);
+            let localSubscriptionExists = false;
+
+            if (hasPushManager) {
+                try {
+                    const localSubscription = await registration!.pushManager.getSubscription();
+                    localSubscriptionExists = localSubscription !== null;
+                } catch (error) {
+                    console.error('Erro ao consultar subscription local:', error);
+                }
             }
-            
+
             const { data, error } = await supabase
                 .from('web_push_subscriptions')
                 .select('id')
@@ -98,12 +79,44 @@ export const useNotifications = (user: User | null) => {
             if (error) {
                 console.error('Erro ao consultar subscriptions:', error);
             }
-            
-            setState(prev => ({ ...prev, isSubscribed: (subscription !== null && data && data.length > 0) }));
+
+            const hasDbSubscription = Boolean(data && data.length > 0);
+
+            setState(prev => ({
+                ...prev,
+                isSubscribed: hasDbSubscription && (!hasPushManager || localSubscriptionExists),
+            }));
+
+            return { hasDbSubscription, hasLocalSubscription: localSubscriptionExists };
         } catch (err) {
             console.error('Erro ao verificar subscription:', err);
+            setState(prev => ({ ...prev, isSubscribed: false }));
+            return { hasDbSubscription: false, hasLocalSubscription: false };
         }
-    };
+    }, [getServiceWorkerRegistration, user]);
+
+    useEffect(() => {
+        const hasNotifications = typeof window !== 'undefined' && 'Notification' in window;
+        const hasServiceWorker = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
+
+        const isSupported = hasNotifications && hasServiceWorker;
+
+        console.log('📱 Suporte a notificações:', {
+            hasNotifications,
+            hasServiceWorker,
+            isSupported,
+        });
+
+        setState(prev => ({
+            ...prev,
+            isSupported,
+            permission: isSupported ? Notification.permission : 'denied',
+        }));
+
+        if (isSupported && user) {
+            checkSubscription();
+        }
+    }, [checkSubscription, user]);
 
     const requestPermission = useCallback(async (): Promise<boolean> => {
         if (!state.isSupported || !user) {
@@ -123,55 +136,49 @@ export const useNotifications = (user: User | null) => {
                 return false;
             }
 
-            // Verificar se navegador suporta PushManager (Chrome, Firefox, Edge)
-            if ('PushManager' in window) {
-                // Registrar subscription push
-                const registration = await navigator.serviceWorker.ready;
-                
-                // IMPORTANTE: Usar VAPID public key do servidor
-                const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-                
-                try {
-                    const existing = await registration.pushManager.getSubscription();
-                    const subscription = existing ?? await registration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey,
+            const registration = await getServiceWorkerRegistration();
+
+            if (!registration) {
+                console.warn('⚠️ Service Worker não está pronto.');
+                return true;
+            }
+
+            if (!registration.pushManager) {
+                console.log('📱 Navegador sem PushManager. Somente notificações locais disponíveis.');
+                return true;
+            }
+
+            const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+
+            try {
+                const existing = await registration.pushManager.getSubscription();
+                const subscription = existing ?? await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey,
+                });
+
+                const subscriptionJSON = subscription.toJSON();
+
+                const { error } = await supabase
+                    .from('web_push_subscriptions')
+                    .upsert({
+                        user_id: user.id,
+                        endpoint: subscriptionJSON.endpoint,
+                        keys: subscriptionJSON.keys ?? {},
+                    }, {
+                        onConflict: 'endpoint',
                     });
 
-                    // Salvar subscription no Supabase
-                    const subscriptionObj = {
-                        endpoint: subscription.endpoint,
-                        keys: {
-                            p256dh: arrayBufferToBase64(subscription.getKey('p256dh')),
-                            auth: arrayBufferToBase64(subscription.getKey('auth')),
-                        },
-                    };
-
-                    const { error } = await supabase
-                        .from('web_push_subscriptions')
-                        .upsert({
-                            user_id: user.id,
-                            endpoint: subscription.endpoint,
-                            keys: subscriptionObj.keys,
-                        }, {
-                            onConflict: 'endpoint'
-                        });
-
-                    if (error && error.code !== '23505') {
-                        console.error('Erro ao salvar subscription:', error);
-                        return false;
-                    }
-
-                    setState(prev => ({ ...prev, isSubscribed: true }));
-                    console.log('✅ Subscription push salva!');
-                } catch (pushError) {
-                    console.warn('⚠️ PushManager não disponível ou erro:', pushError);
-                    // Mesmo sem Push, notificações locais ainda funcionam
-                    console.log('✅ Notificações locais ativadas (sem push)');
+                if (error && error.code !== '23505') {
+                    console.error('Erro ao salvar subscription:', error);
+                    return false;
                 }
-            } else {
-                console.log('📱 Navegador não suporta Push API (ex: Safari antigo)');
-                console.log('✅ Notificações locais ainda funcionam');
+
+                await checkSubscription();
+                console.log('✅ Subscription push salva!');
+            } catch (pushError) {
+                console.warn('⚠️ Erro ao registrar PushManager:', pushError);
+                console.log('✅ Notificações locais ativadas (sem push)');
             }
 
             return true;
@@ -179,7 +186,7 @@ export const useNotifications = (user: User | null) => {
             console.error('Erro ao solicitar permissão:', error);
             return false;
         }
-    }, [state.isSupported, user]);
+    }, [checkSubscription, getServiceWorkerRegistration, state.isSupported, user, vapidPublicKey]);
 
     const scheduleNotification = useCallback(async (habit: Habit) => {
         if (!state.isSupported || state.permission !== 'granted' || !user) {
@@ -241,21 +248,39 @@ export const useNotifications = (user: User | null) => {
         }
 
         try {
-            const registration = await navigator.serviceWorker.ready;
-            await registration.showNotification(`🎯 ${habitName}`, {
+            const registration = await getServiceWorkerRegistration();
+
+            if (!registration) {
+                console.warn('⚠️ Service Worker não disponível para enviar notificação de teste.');
+                return false;
+            }
+
+            const notificationOptions: NotificationOptions = {
                 body: 'Este é um teste de notificação!',
                 icon: '/manifest.json',
                 badge: '/manifest.json',
                 tag: 'test-notification',
                 requireInteraction: false,
                 vibrate: [200, 100, 200],
-            });
-            return true;
+            };
+
+            if ('showNotification' in registration) {
+                await registration.showNotification(`🎯 ${habitName}`, notificationOptions);
+                return true;
+            }
+
+            if (typeof Notification === 'function') {
+                new Notification(`🎯 ${habitName}`, notificationOptions);
+                return true;
+            }
+
+            console.warn('⚠️ API de notificação direta não disponível.');
+            return false;
         } catch (error) {
             console.error('Erro ao enviar notificação de teste:', error);
             return false;
         }
-    }, [state.isSupported, state.permission]);
+    }, [getServiceWorkerRegistration, state.isSupported, state.permission]);
 
     const sendStreakReminderNotification = useCallback(async (habitName: string, currentStreak: number) => {
         if (!state.isSupported || state.permission !== 'granted') {

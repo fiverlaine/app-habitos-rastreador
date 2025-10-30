@@ -20,6 +20,13 @@
 - Salva no Supabase
 - Agendar lembretes ao criar hábito com horário
 
+### 🔄 Atualização 2025-10-30
+- Corrigimos a detecção de suporte ao Push API para PWAs no iOS 16.4+ (o Safari não expõe `PushManager` no `window`, apenas no `ServiceWorkerRegistration`)
+- A inscrição agora usa `subscription.toJSON()` para persistir as chaves exatamente no formato esperado pelo `web-push`
+- Sempre que a permissão é concedida repetimos a verificação da tabela `web_push_subscriptions` para confirmar se o dispositivo ficou marcado como ativo
+- O botão **“Enviar Notificação de Teste”** caiu para um fallback com `new Notification()` caso o `registration.showNotification` não esteja disponível, garantindo feedback instantâneo no Safari
+- Para validar a correção, abra o app atualizado, permita as notificações e confira se o console mostra `✅ Subscription push salva!` e se o registro aparece em `web_push_subscriptions`
+
 ### 4. **Service Worker** ✅
 - Listener `push` configurado
 - Exibe notificação quando recebe
