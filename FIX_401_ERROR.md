@@ -8,15 +8,17 @@ A função está configurada com `verify_jwt: true`, mas o cron job interno do S
 
 ## Solução (Escolha uma das opções)
 
-### ✅ Opção 1: Desabilitar Verify JWT (Recomendado)
+### ✅ Opção 1: Desabilitar Verify JWT + Redeploy (Recomendado)
 
 1. Acesse o **Supabase Dashboard**
 2. Vá em **Edge Functions** → **send-reminders**
 3. Clique na aba **Details**
 4. **Desmarque** a opção **"Verify JWT"**
-5. Salve as alterações
+5. **Salve** as alterações
+6. **IMPORTANTE**: Clique em **"Redeploy"** ou faça uma pequena alteração e salve novamente
+7. Aguarde 1-2 minutos para o cache limpar
 
-A função já tem validação interna usando `x-service-key` para segurança.
+**Se ainda não funcionar**, tente a Opção 2 abaixo.
 
 ### ✅ Opção 2: Atualizar Cron Job com Service Role Key
 
