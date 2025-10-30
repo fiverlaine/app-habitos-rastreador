@@ -1,11 +1,11 @@
 const CACHE_NAME = 'habitos-app-v1';
+// Apenas arquivos locais – evita erros CORS em CDN externos
 const urlsToCache = [
   '/',
   '/index.html',
   '/index.css',
   '/index.tsx',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
+  '/manifest.json'
 ];
 
 // Install event
@@ -19,14 +19,17 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Fetch event
+// Intercepta apenas requisições da mesma origem para evitar CORS block
 self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  if (new URL(request.url).origin !== self.location.origin) {
+    // Deixa o navegador lidar com requisições cross-origin normalmente
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
+    caches.match(request).then((cached) => cached || fetch(request))
   );
 });
 
