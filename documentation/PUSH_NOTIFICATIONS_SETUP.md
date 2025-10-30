@@ -113,7 +113,9 @@ Para disparar **automaticamente** a Edge Function a cada minuto:
 
 1. **Vá no Supabase Dashboard** → Database → Extensions
 2. **Ative a extensão `pg_cron`** (se ainda não estiver)
-3. **Crie um job**:
+3. **IMPORTANTE**: Desabilite **"Verify JWT"** na Edge Function `send-reminders`:
+   - Edge Functions → send-reminders → Details → Desmarcar "Verify JWT"
+4. **Crie um job**:
 
 ```sql
 -- Criar job para rodar a Edge Function a cada minuto
@@ -123,11 +125,16 @@ SELECT cron.schedule(
     $$
     SELECT net.http_post(
         url := 'https://jiohwtmymnizvwzyvdef.supabase.co/functions/v1/send-reminders',
-        headers := '{"Content-Type": "application/json", "Authorization": "Bearer ' || current_setting('app.jwt_secret') || '"}'
+        headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'x-service-key', current_setting('app.settings.service_role_key', true)
+        )
     ) as request_id;
     $$
 );
 ```
+
+**⚠️ Se receber erro 401**: Veja o arquivo `FIX_401_ERROR.md` na raiz do projeto para instruções detalhadas.
 
 ---
 
@@ -154,6 +161,16 @@ SELECT cron.schedule(
 - Subscription ficou inválida (app reinstalado, etc)
 - O código já remove automaticamente subscriptions inválidas
 - Usuário precisa reativar notificações
+
+### **"Erro 401 Unauthorized" no cron job**
+
+✅ **Solução**:
+1. Acesse **Supabase Dashboard** → **Edge Functions** → **send-reminders** → **Details**
+2. **Desmarque** a opção **"Verify JWT"**
+3. Salve as alterações
+4. A função já tem validação interna de segurança via `x-service-key`
+
+**Veja instruções detalhadas em**: `FIX_401_ERROR.md` na raiz do projeto.
 
 ---
 
