@@ -1,6 +1,6 @@
 {
-  "name": "App de Hábitos",
-  "short_name": "Hábitos",
+  "name": "Hábitos",
+  "short_name": "🎯",
   "description": "Rastreie seus hábitos diários com facilidade",
   "start_url": "/",
   "display": "standalone",

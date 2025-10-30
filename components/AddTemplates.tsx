@@ -39,6 +39,9 @@ const AddTemplates: React.FC<AddTemplatesProps> = ({ onBack, onCreateFromTemplat
             type: tpl.type,
             unit: tpl.unit,
             targetValue: tpl.targetValue,
+            scheduledTimes: tpl.scheduledTimes || [],
+            timeOfDay: tpl.timeOfDay || 'anytime',
+            reminderEnabled: tpl.reminderEnabled !== false,
         };
         onCreateFromTemplate(habit);
     };
