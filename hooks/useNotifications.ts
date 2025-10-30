@@ -257,8 +257,6 @@ export const useNotifications = (user: User | null) => {
 
             const notificationOptions: NotificationOptions = {
                 body: 'Este é um teste de notificação!',
-                icon: '/manifest.json',
-                badge: '/manifest.json',
                 tag: 'test-notification',
                 requireInteraction: false,
                 vibrate: [200, 100, 200],
