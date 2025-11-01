@@ -106,6 +106,21 @@ Contém:
 
 ---
 
+### 6. 🚀 [SUGESTOES_MELHORIAS.md](./SUGESTOES_MELHORIAS.md) ⭐ **NOVO**
+**Sugestões de Melhorias Baseadas em Apps de Referência**
+
+Contém:
+- Análise completa dos principais apps do mercado (HabitNow, Loop, Way of Life, Habitify, Streaks)
+- 10+ sugestões de implementação categorizadas por prioridade
+- Comparação com concorrentes
+- Roadmap de implementação sugerido
+- Diferenciais que você já tem vs concorrentes
+- Recomendações finais priorizadas
+
+**Para quem?** Desenvolvedores, PMs e stakeholders que querem planejar próximas features
+
+---
+
 ## 🚀 Por Onde Começar?
 
 ### Se você é USUÁRIO:
@@ -212,12 +227,13 @@ utils/achievements.ts → Sistema de conquistas
 
 ## 📊 Estatísticas da Documentação
 
-- **Total de arquivos**: 5
-- **Linhas de documentação**: ~2.500+
-- **Seções principais**: 50+
-- **Exemplos de código**: 30+
+- **Total de arquivos**: 6
+- **Linhas de documentação**: ~3.500+
+- **Seções principais**: 70+
+- **Exemplos de código**: 40+
 - **Mockups visuais**: 20+
 - **Diagramas**: 15+
+- **Sugestões de features**: 10+
 
 ---
 

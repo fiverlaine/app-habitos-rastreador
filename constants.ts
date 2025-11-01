@@ -1,7 +1,26 @@
 
 import type { HabitUnit, TimeOfDay } from './types';
 
-export const HABIT_ICONS = ['Book', 'Water', 'Dumbbell', 'Run', 'Code', 'Meditate', 'Fruit'];
+export const HABIT_ICONS = [
+    // Ícones originais
+    'Book', 'Water', 'Dumbbell', 'Run', 'Code', 'Meditate', 'Fruit',
+    // Novos ícones - Saúde
+    'HeartIcon', 'PillIcon', 'FaceSmileIcon',
+    // Novos ícones - Alimentação
+    'MugIcon', 'CakeIcon',
+    // Novos ícones - Exercício
+    'BoltIcon',
+    // Novos ícones - Trabalho
+    'BriefcaseIcon', 'DocumentTextIcon', 'PencilIcon',
+    // Novos ícones - Criativo
+    'PhotoIcon',
+    // Novos ícones - Social
+    'UserGroupIcon', 'EnvelopeIcon',
+    // Novos ícones - Casa
+    'ShoppingBagIcon', 'ShoppingCartIcon',
+    // Novos ícones - Outros
+    'GiftIcon', 'PuzzleIcon'
+];
 
 export const TIME_OF_DAY_OPTIONS: { value: TimeOfDay; label: string; icon: string; description: string }[] = [
     { value: 'morning', label: 'Manhã', icon: '🌅', description: '6h - 12h' },
