@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Hábitos • Transforme sua rotina</title>
     
     <!-- PWA Meta Tags -->
@@ -81,23 +82,61 @@
         html {
             scroll-behavior: smooth;
         }
+
+        /* Safe area para evitar conflito com status bar do celular */
+        body {
+            padding-top: env(safe-area-inset-top, 0px);
+        }
         
-        /* Custom scrollbar */
+        /* Custom scrollbar - fino e elegante */
         ::-webkit-scrollbar {
-            width: 6px;
+            width: 3px;
         }
         
         ::-webkit-scrollbar-track {
-            background: #1e293b;
+            background: transparent;
         }
         
         ::-webkit-scrollbar-thumb {
-            background: #475569;
-            border-radius: 3px;
+            background: linear-gradient(180deg, rgba(6, 182, 212, 0.6) 0%, rgba(59, 130, 246, 0.6) 100%);
+            border-radius: 10px;
+            transition: background 0.2s ease;
         }
         
         ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
+            background: linear-gradient(180deg, rgba(6, 182, 212, 1) 0%, rgba(59, 130, 246, 1) 100%);
+        }
+
+        /* Firefox scrollbar */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(6, 182, 212, 0.6) transparent;
+        }
+
+        /* Custom scrollbar para áreas específicas com fundo sutil */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.2);
+            border-radius: 10px;
+            margin: 4px 0;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(6, 182, 212, 0.7) 0%, rgba(59, 130, 246, 0.7) 100%);
+            border-radius: 10px;
+            transition: background 0.2s ease;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, rgba(6, 182, 212, 1) 0%, rgba(59, 130, 246, 1) 100%);
+        }
+
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(6, 182, 212, 0.7) rgba(30, 41, 59, 0.2);
         }
 
         /* Glassmorphism utility */

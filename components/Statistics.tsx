@@ -1,19 +1,116 @@
 import React, { useMemo, useState } from 'react';
 import type { Habit, Completion } from '../types';
 import { calculateStreak } from '../utils/streak';
+import { getIconComponent } from './icons';
 
 interface StatisticsProps {
     habits: Habit[];
     completions: Completion[];
 }
 
+type PeriodFilter = '7d' | '30d' | '3m' | '6m' | '1y' | 'all';
+
 const Statistics: React.FC<StatisticsProps> = ({ habits, completions }) => {
+    const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+    
+    // Função para calcular data de início baseada no filtro
+    const getStartDate = (period: PeriodFilter): Date | null => {
+        const today = new Date();
+        const start = new Date(today);
+        
+        switch (period) {
+            case '7d':
+                start.setDate(today.getDate() - 7);
+                return start;
+            case '30d':
+                start.setDate(today.getDate() - 30);
+                return start;
+            case '3m':
+                start.setMonth(today.getMonth() - 3);
+                return start;
+            case '6m':
+                start.setMonth(today.getMonth() - 6);
+                return start;
+            case '1y':
+                start.setFullYear(today.getFullYear() - 1);
+                return start;
+            case 'all':
+                return null;
+        }
+    };
+
+    // Filtrar dados baseado no período selecionado
+    const filteredData = useMemo(() => {
+        const startDate = getStartDate(periodFilter);
+        if (!startDate) return { habits, completions };
+        
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const filteredCompletions = completions.filter(c => c.date >= startDateStr);
+        
+        // Filtrar hábitos que foram criados antes ou durante o período
+        const filteredHabits = habits.filter(h => {
+            const habitCreatedDate = new Date(h.createdAt).toISOString().split('T')[0];
+            return habitCreatedDate <= new Date().toISOString().split('T')[0];
+        });
+        
+        return { habits: filteredHabits, completions: filteredCompletions };
+    }, [habits, completions, periodFilter]);
+
+    // Dados do período anterior para comparação
+    const previousPeriodData = useMemo(() => {
+        const startDate = getStartDate(periodFilter);
+        if (!startDate) return null;
+        
+        const today = new Date();
+        let periodEnd: Date;
+        let periodStart: Date;
+        
+        switch (periodFilter) {
+            case '7d':
+                periodEnd = new Date(startDate);
+                periodStart = new Date(startDate);
+                periodStart.setDate(periodStart.getDate() - 7);
+                break;
+            case '30d':
+                periodEnd = new Date(startDate);
+                periodStart = new Date(startDate);
+                periodStart.setDate(periodStart.getDate() - 30);
+                break;
+            case '3m':
+                periodEnd = new Date(startDate);
+                periodStart = new Date(startDate);
+                periodStart.setMonth(periodStart.getMonth() - 3);
+                break;
+            case '6m':
+                periodEnd = new Date(startDate);
+                periodStart = new Date(startDate);
+                periodStart.setMonth(periodStart.getMonth() - 6);
+                break;
+            case '1y':
+                periodEnd = new Date(startDate);
+                periodStart = new Date(startDate);
+                periodStart.setFullYear(periodStart.getFullYear() - 1);
+                break;
+            default:
+                return null;
+        }
+        
+        const startDateStr = periodStart.toISOString().split('T')[0];
+        const endDateStr = periodEnd.toISOString().split('T')[0];
+        
+        const prevCompletions = completions.filter(c => 
+            c.date >= startDateStr && c.date < endDateStr
+        );
+        
+        return { habits, completions: prevCompletions };
+    }, [habits, completions, periodFilter]);
     
     const stats = useMemo(() => {
+        const { habits: filteredHabits, completions: filteredCompletions } = filteredData;
         const todayStr = new Date().toISOString().split('T')[0];
 
         // Total de possíveis conclusões = soma de dias existentes para cada hábito
-        const totalPossibleCompletions = habits.reduce((acc, habit) => {
+        const totalPossibleCompletions = filteredHabits.reduce((acc, habit) => {
             const startDate = new Date(habit.createdAt);
             const today = new Date();
             const diffTime = Math.abs(today.getTime() - startDate.getTime());
@@ -23,22 +120,22 @@ const Statistics: React.FC<StatisticsProps> = ({ habits, completions }) => {
 
         // Taxa geral
         const overallCompletionRate = totalPossibleCompletions > 0
-            ? (completions.length / totalPossibleCompletions) * 100
+            ? (filteredCompletions.length / totalPossibleCompletions) * 100
             : 0;
 
         // Maior sequência histórica
-        const longestStreakEver = habits.reduce((maxStreak, habit) => {
-            const habitCompletions = completions.filter(c => c.habitId === habit.id).map(c => c.date);
+        const longestStreakEver = filteredHabits.reduce((maxStreak, habit) => {
+            const habitCompletions = filteredCompletions.filter(c => c.habitId === habit.id).map(c => c.date);
             const { longestStreak } = calculateStreak(habitCompletions);
             return Math.max(maxStreak, longestStreak);
         }, 0);
 
         // Dias perfeitos
-        const perfectDays = countPerfectDays(habits, completions);
+        const perfectDays = countPerfectDays(filteredHabits, filteredCompletions);
 
         // Hábitos concluídos hoje
-        const completedToday = habits.reduce((count, habit) => {
-            const todayComps = completions.filter(c => c.habitId === habit.id && c.date === todayStr);
+        const completedToday = filteredHabits.reduce((count, habit) => {
+            const todayComps = filteredCompletions.filter(c => c.habitId === habit.id && c.date === todayStr);
             if (habit.type === 'boolean') {
                 return count + (todayComps.length > 0 ? 1 : 0);
             }
@@ -50,44 +147,331 @@ const Statistics: React.FC<StatisticsProps> = ({ habits, completions }) => {
         }, 0);
 
         // Média diária (completions por dia desde o primeiro hábito)
-        const firstDate = habits.reduce((min, h) => Math.min(min, new Date(h.createdAt).getTime()), Date.now());
-        const daysSince = Math.max(1, Math.ceil((Date.now() - firstDate) / (1000 * 60 * 60 * 24)));
-        const dailyAverage = completions.length / daysSince;
+        const startDate = getStartDate(periodFilter);
+        const firstDate = filteredHabits.reduce((min, h) => Math.min(min, new Date(h.createdAt).getTime()), Date.now());
+        const periodStart = startDate ? startDate.getTime() : firstDate;
+        const daysSince = Math.max(1, Math.ceil((Date.now() - periodStart) / (1000 * 60 * 60 * 24)));
+        const dailyAverage = filteredCompletions.length / daysSince;
+
+        // Calcular taxa do período anterior para comparação
+        let previousRate: number | null = null;
+        let rateChange: number | null = null;
+        if (previousPeriodData) {
+            const startDate = getStartDate(periodFilter);
+            if (startDate) {
+                const today = new Date();
+                let periodEnd: Date;
+                let periodStart: Date;
+                
+                switch (periodFilter) {
+                    case '7d':
+                        periodEnd = new Date(startDate);
+                        periodStart = new Date(startDate);
+                        periodStart.setDate(periodStart.getDate() - 7);
+                        break;
+                    case '30d':
+                        periodEnd = new Date(startDate);
+                        periodStart = new Date(startDate);
+                        periodStart.setDate(periodStart.getDate() - 30);
+                        break;
+                    case '3m':
+                        periodEnd = new Date(startDate);
+                        periodStart = new Date(startDate);
+                        periodStart.setMonth(periodStart.getMonth() - 3);
+                        break;
+                    case '6m':
+                        periodEnd = new Date(startDate);
+                        periodStart = new Date(startDate);
+                        periodStart.setMonth(periodStart.getMonth() - 6);
+                        break;
+                    case '1y':
+                        periodEnd = new Date(startDate);
+                        periodStart = new Date(startDate);
+                        periodStart.setFullYear(periodStart.getFullYear() - 1);
+                        break;
+                    default:
+                        periodEnd = new Date(startDate);
+                        periodStart = new Date(startDate);
+                }
+                
+                const prevTotalPossible = previousPeriodData.habits.reduce((acc, habit) => {
+                    const habitCreated = new Date(habit.createdAt);
+                    const startTime = Math.max(periodStart.getTime(), habitCreated.getTime());
+                    const endTime = periodEnd.getTime();
+                    const diffDays = Math.ceil((endTime - startTime) / (1000 * 60 * 60 * 24));
+                    return acc + Math.max(diffDays, 1);
+                }, 0);
+                
+                previousRate = prevTotalPossible > 0
+                    ? (previousPeriodData.completions.length / prevTotalPossible) * 100
+                    : 0;
+                
+                rateChange = overallCompletionRate - previousRate;
+            }
+        }
 
         return {
-            totalHabits: habits.length,
+            totalHabits: filteredHabits.length,
             overallCompletionRate,
             longestStreakEver,
             perfectDays,
             completedToday,
-            dailyAverage
+            dailyAverage,
+            previousRate,
+            rateChange
         };
-    }, [habits, completions]);
+    }, [filteredData, periodFilter]);
 
-    const weeklyChartData = useMemo(() => {
-        const data: { name: string; concluídos: number }[] = [];
-        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    // Dados para gráfico de linha temporal
+    const lineChartData = useMemo(() => {
+        const { habits: filteredHabits, completions: filteredCompletions } = filteredData;
+        const startDate = getStartDate(periodFilter);
         const today = new Date();
         
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            const dayName = days[date.getDay()];
-            const dateStr = date.toISOString().split('T')[0];
-            const count = completions.filter(c => c.date === dateStr).length;
-            data.push({ name: dayName, concluídos: count });
+        let daysCount = 30; // padrão
+        let interval = 'day';
+        
+        switch (periodFilter) {
+            case '7d':
+                daysCount = 7;
+                interval = 'day';
+                break;
+            case '30d':
+                daysCount = 30;
+                interval = 'day';
+                break;
+            case '3m':
+                daysCount = 90;
+                interval = 'day';
+                break;
+            case '6m':
+                daysCount = 180;
+                interval = 'week';
+                break;
+            case '1y':
+                daysCount = 365;
+                interval = 'week';
+                break;
+            case 'all':
+                const firstHabitDate = filteredHabits.reduce((min, h) => 
+                    Math.min(min, new Date(h.createdAt).getTime()), Date.now()
+                );
+                daysCount = Math.ceil((Date.now() - firstHabitDate) / (1000 * 60 * 60 * 24));
+                interval = daysCount > 180 ? 'week' : 'day';
+                break;
         }
+        
+        const data: { date: string; rate: number }[] = [];
+        const endDate = new Date(today);
+        const actualStart = startDate || new Date(endDate.getTime() - daysCount * 24 * 60 * 60 * 1000);
+        
+        if (interval === 'day') {
+            for (let i = 0; i < daysCount; i++) {
+                const date = new Date(actualStart);
+                date.setDate(actualStart.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                
+                const activeHabits = filteredHabits.filter(h => 
+                    new Date(h.createdAt).toISOString().split('T')[0] <= dateStr
+                );
+                
+                if (activeHabits.length === 0) {
+                    data.push({ date: dateStr, rate: 0 });
+                    continue;
+                }
+                
+                let completed = 0;
+                activeHabits.forEach(habit => {
+                    const dayCompletions = filteredCompletions.filter(c => 
+                        c.habitId === habit.id && c.date === dateStr
+                    );
+                    
+                    if (habit.type === 'boolean' && dayCompletions.length > 0) {
+                        completed++;
+                    } else if (habit.type === 'numeric' && habit.targetValue) {
+                        const value = dayCompletions.reduce((s, c) => s + (c.value || 0), 0);
+                        if (value >= habit.targetValue) completed++;
+                    }
+                });
+                
+                const rate = (completed / activeHabits.length) * 100;
+                data.push({ date: dateStr, rate });
+            }
+        } else {
+            // Agrupar por semana
+            let currentWeekStart = new Date(actualStart);
+            while (currentWeekStart <= endDate) {
+                const weekEnd = new Date(currentWeekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                
+                let totalRate = 0;
+                let dayCount = 0;
+                
+                for (let d = new Date(currentWeekStart); d <= weekEnd && d <= endDate; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0];
+                    const activeHabits = filteredHabits.filter(h => 
+                        new Date(h.createdAt).toISOString().split('T')[0] <= dateStr
+                    );
+                    
+                    if (activeHabits.length > 0) {
+                        let completed = 0;
+                        activeHabits.forEach(habit => {
+                            const dayCompletions = filteredCompletions.filter(c => 
+                                c.habitId === habit.id && c.date === dateStr
+                            );
+                            
+                            if (habit.type === 'boolean' && dayCompletions.length > 0) {
+                                completed++;
+                            } else if (habit.type === 'numeric' && habit.targetValue) {
+                                const value = dayCompletions.reduce((s, c) => s + (c.value || 0), 0);
+                                if (value >= habit.targetValue) completed++;
+                            }
+                        });
+                        
+                        totalRate += (completed / activeHabits.length) * 100;
+                        dayCount++;
+                    }
+                }
+                
+                if (dayCount > 0) {
+                    data.push({ 
+                        date: currentWeekStart.toISOString().split('T')[0], 
+                        rate: totalRate / dayCount 
+                    });
+                }
+                
+                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            }
+        }
+        
         return data;
-    }, [completions]);
+    }, [filteredData, periodFilter]);
+
+    // Ranking de hábitos
+    const habitRanking = useMemo(() => {
+        const { habits: filteredHabits, completions: filteredCompletions } = filteredData;
+        
+        const rankings = filteredHabits.map(habit => {
+            const habitCompletions = filteredCompletions.filter(c => c.habitId === habit.id);
+            const startDate = getStartDate(periodFilter);
+            const habitCreated = new Date(habit.createdAt);
+            
+            let possibleDays = 0;
+            if (startDate) {
+                const periodStart = Math.max(startDate.getTime(), habitCreated.getTime());
+                possibleDays = Math.ceil((Date.now() - periodStart) / (1000 * 60 * 60 * 24));
+            } else {
+                possibleDays = Math.ceil((Date.now() - habitCreated.getTime()) / (1000 * 60 * 60 * 24));
+            }
+            
+            possibleDays = Math.max(possibleDays, 1);
+            
+            let completedDays = 0;
+            const datesWithCompletion = new Set<string>();
+            
+            habitCompletions.forEach(c => {
+                datesWithCompletion.add(c.date);
+            });
+            
+            datesWithCompletion.forEach(dateStr => {
+                const dayCompletions = habitCompletions.filter(c => c.date === dateStr);
+                
+                if (habit.type === 'boolean' && dayCompletions.length > 0) {
+                    completedDays++;
+                } else if (habit.type === 'numeric' && habit.targetValue) {
+                    const value = dayCompletions.reduce((s, c) => s + (c.value || 0), 0);
+                    if (value >= habit.targetValue) completedDays++;
+                }
+            });
+            
+            const completionRate = (completedDays / possibleDays) * 100;
+            
+            return {
+                habit,
+                completionRate,
+                completedDays,
+                possibleDays
+            };
+        }).sort((a, b) => b.completionRate - a.completionRate);
+        
+        return rankings;
+    }, [filteredData, periodFilter]);
 
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="mb-6 px-1">
-                <h1 className="text-2xl font-bold text-white mb-1">Visão Geral</h1>
-                <p className="text-sm text-slate-500">Estatísticas completas do seu progresso</p>
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-white mb-1">Visão Geral</h1>
+                        <p className="text-sm text-slate-500">Estatísticas completas do seu progresso</p>
+                    </div>
+                </div>
+                
+                {/* Filtro de Período */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                    {([
+                        { value: '7d' as PeriodFilter, label: '7 dias' },
+                        { value: '30d' as PeriodFilter, label: '30 dias' },
+                        { value: '3m' as PeriodFilter, label: '3 meses' },
+                        { value: '6m' as PeriodFilter, label: '6 meses' },
+                        { value: '1y' as PeriodFilter, label: '1 ano' },
+                        { value: 'all' as PeriodFilter, label: 'Tudo' },
+                    ]).map(({ value, label }) => (
+                        <button
+                            key={value}
+                            onClick={() => setPeriodFilter(value)}
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                                periodFilter === value
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
+                                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-white border border-slate-700/50'
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            <CompactMonthCalendar habits={habits} completions={completions} />
+            {/* Comparação com período anterior */}
+            {stats.rateChange !== null && stats.previousRate !== null && (
+                <div className="bg-slate-900/40 backdrop-blur-sm rounded-3xl p-5 border border-slate-800/50 shadow-xl">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-slate-500 mb-1">Comparado ao período anterior</p>
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl font-bold text-white">
+                                    {stats.previousRate.toFixed(1)}%
+                                </span>
+                                <span className={`text-lg font-semibold flex items-center gap-1 ${
+                                    stats.rateChange > 0 ? 'text-emerald-400' : stats.rateChange < 0 ? 'text-red-400' : 'text-slate-400'
+                                }`}>
+                                    {stats.rateChange > 0 ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                        </svg>
+                                    ) : stats.rateChange < 0 ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                                        </svg>
+                                    ) : null}
+                                    {stats.rateChange !== 0 && `${Math.abs(stats.rateChange).toFixed(1)}%`}
+                                    {stats.rateChange === 0 && 'Sem mudança'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <CompactMonthCalendar habits={filteredData.habits} completions={filteredData.completions} />
+
+            {/* Gráfico de Linha Temporal */}
+            {lineChartData.length > 0 && (
+                <div className="bg-slate-900/40 backdrop-blur-sm rounded-3xl p-6 border border-slate-800/50 shadow-xl">
+                    <h2 className="text-lg font-bold text-white mb-4">Evolução da Taxa de Conclusão</h2>
+                    <LineChart data={lineChartData} />
+                </div>
+            )}
 
             <div className="bg-slate-900/40 backdrop-blur-sm rounded-3xl p-6 border border-slate-800/50 shadow-xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -100,7 +484,7 @@ const Statistics: React.FC<StatisticsProps> = ({ habits, completions }) => {
                         </div>
                         <div className="text-slate-400 text-base font-semibold">Taxa Geral de Conclusão</div>
                         <p className="text-slate-500 text-sm leading-relaxed">
-                            Seu desempenho geral em todos os hábitos desde o início
+                            Seu desempenho geral em todos os hábitos {periodFilter === 'all' ? 'desde o início' : 'no período selecionado'}
                         </p>
                     </div>
                 </div>
@@ -111,6 +495,44 @@ const Statistics: React.FC<StatisticsProps> = ({ habits, completions }) => {
                     <MiniStat title="Média Diária" value={`${stats.dailyAverage.toFixed(0)}`} color="fuchsia"/>
                 </div>
             </div>
+
+            {/* Ranking de Hábitos */}
+            {habitRanking.length > 0 && (
+                <div className="bg-slate-900/40 backdrop-blur-sm rounded-3xl p-6 border border-slate-800/50 shadow-xl">
+                    <h2 className="text-lg font-bold text-white mb-4">Ranking de Hábitos</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Melhores */}
+                        <div>
+                            <h3 className="text-sm font-semibold text-emerald-400 mb-3 flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                </svg>
+                                Melhores Desempenhos
+                            </h3>
+                            <div className="space-y-2">
+                                {habitRanking.slice(0, 5).map((item, index) => (
+                                    <HabitRankItem key={item.habit.id} item={item} rank={index + 1} isBest={true} />
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {/* Piores */}
+                        <div>
+                            <h3 className="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Precisam de Atenção
+                            </h3>
+                            <div className="space-y-2">
+                                {habitRanking.slice(-5).reverse().map((item, index) => (
+                                    <HabitRankItem key={item.habit.id} item={item} rank={habitRanking.length - index} isBest={false} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -338,6 +760,167 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({ progress, isToday, size
                     />
                 )}
             </svg>
+        </div>
+    );
+};
+
+// Componente de Gráfico de Linha
+interface LineChartProps {
+    data: { date: string; rate: number }[];
+}
+
+const LineChart: React.FC<LineChartProps> = ({ data }) => {
+    if (data.length === 0) return null;
+
+    const width = 800;
+    const height = 200;
+    const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    const maxRate = Math.max(...data.map(d => d.rate), 100);
+    const minRate = Math.min(...data.map(d => d.rate), 0);
+
+    const xScale = (index: number) => (index / (data.length - 1 || 1)) * chartWidth;
+    const yScale = (value: number) => chartHeight - ((value - minRate) / (maxRate - minRate || 1)) * chartHeight;
+
+    // Gerar pontos para a linha
+    const points = data.map((d, i) => ({
+        x: xScale(i),
+        y: yScale(d.rate),
+        rate: d.rate
+    }));
+
+    // Criar path para a linha
+    const pathData = points.map((point, i) => 
+        i === 0 ? `M ${point.x} ${point.y}` : `L ${point.x} ${point.y}`
+    ).join(' ');
+
+    // Criar path para a área preenchida
+    const areaPath = `${pathData} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z`;
+
+    return (
+        <div className="w-full overflow-x-auto">
+            <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+                <defs>
+                    <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                <g transform={`translate(${padding.left}, ${padding.top})`}>
+                    {/* Grid lines */}
+                    {[0, 25, 50, 75, 100].map((value) => {
+                        const y = yScale(value);
+                        return (
+                            <g key={value}>
+                                <line
+                                    x1={0}
+                                    y1={y}
+                                    x2={chartWidth}
+                                    y2={y}
+                                    stroke="#1e293b"
+                                    strokeWidth={1}
+                                    strokeDasharray="4,4"
+                                    opacity={0.3}
+                                />
+                                <text
+                                    x={-10}
+                                    y={y + 4}
+                                    textAnchor="end"
+                                    fill="#64748b"
+                                    fontSize="10"
+                                >
+                                    {value}%
+                                </text>
+                            </g>
+                        );
+                    })}
+
+                    {/* Área preenchida */}
+                    <path
+                        d={areaPath}
+                        fill="url(#lineGradient)"
+                    />
+
+                    {/* Linha */}
+                    <path
+                        d={pathData}
+                        fill="none"
+                        stroke="#06b6d4"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+
+                    {/* Pontos */}
+                    {points.map((point, i) => (
+                        <circle
+                            key={i}
+                            cx={point.x}
+                            cy={point.y}
+                            r={4}
+                            fill="#06b6d4"
+                            className="hover:r-6 transition-all"
+                        />
+                    ))}
+                </g>
+            </svg>
+        </div>
+    );
+};
+
+// Componente de Item do Ranking
+interface HabitRankItemProps {
+    item: {
+        habit: Habit;
+        completionRate: number;
+        completedDays: number;
+        possibleDays: number;
+    };
+    rank: number;
+    isBest: boolean;
+}
+
+const HabitRankItem: React.FC<HabitRankItemProps> = ({ item, rank, isBest }) => {
+    const IconComponent = getIconComponent(item.habit.icon);
+
+    return (
+        <div className={`group relative rounded-2xl p-3 flex items-center gap-3 border backdrop-blur-sm transition-all duration-300 ${
+            isBest 
+                ? 'bg-gradient-to-br from-emerald-500/10 to-teal-600/10 border-emerald-500/20 hover:border-emerald-500/40' 
+                : 'bg-gradient-to-br from-amber-500/10 to-orange-600/10 border-amber-500/20 hover:border-amber-500/40'
+        }`}>
+            <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-slate-800/80 flex items-center justify-center text-xs font-bold text-white">
+                #{rank}
+            </div>
+            <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${item.habit.color} flex items-center justify-center`}>
+                <IconComponent className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-white truncate">{item.habit.name}</p>
+                <p className="text-xs text-slate-400">
+                    {item.completedDays} de {item.possibleDays} dias
+                </p>
+            </div>
+            <div className="flex-shrink-0 text-right">
+                <div className={`text-sm font-bold ${
+                    isBest ? 'text-emerald-400' : 'text-amber-400'
+                }`}>
+                    {item.completionRate.toFixed(0)}%
+                </div>
+            </div>
+            {/* Barra de progresso */}
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-800/50 rounded-b-2xl overflow-hidden">
+                <div
+                    className={`h-full transition-all duration-500 ${
+                        isBest 
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500' 
+                            : 'bg-gradient-to-r from-amber-500 to-orange-500'
+                    }`}
+                    style={{ width: `${item.completionRate}%` }}
+                />
+            </div>
         </div>
     );
 };

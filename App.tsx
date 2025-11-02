@@ -207,7 +207,7 @@ VITE_SUPABASE_ANON_KEY=eyJh...`}
     if (dataLoading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 font-sans text-slate-100 p-6">
-                <div className="max-w-2xl mx-auto pb-24">
+                <div className="max-w-2xl mx-auto pb-16 pt-12">
                     <main className="mt-8 space-y-6 animate-fade-in">
                         <div className="text-center mb-10">
                             <div className="inline-flex items-center gap-3 mb-3">
@@ -257,7 +257,7 @@ VITE_SUPABASE_ANON_KEY=eyJh...`}
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 font-sans text-slate-100">
-            <div className="max-w-2xl mx-auto pb-28 px-5 pt-6">
+            <div className="max-w-2xl mx-auto pb-16 px-5 pt-12">
                 <main className="animate-fade-in">
                     {renderView()}
                 </main>
@@ -293,7 +293,7 @@ VITE_SUPABASE_ANON_KEY=eyJh...`}
             {isSupported && permission !== 'granted' && (
                 <button
                     onClick={() => setShowNotificationSettings(true)}
-                    className="fixed bottom-28 right-5 bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-2xl p-4 shadow-2xl shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 z-30 flex items-center gap-2 group active:scale-95"
+                    className="fixed bottom-16 right-5 bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-2xl p-3 shadow-2xl shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 z-30 flex items-center gap-2 group active:scale-95"
                     title="Ativar Notificações"
                 >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
