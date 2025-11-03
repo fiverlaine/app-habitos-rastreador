@@ -136,7 +136,7 @@ const App: React.FC = () => {
     // Se há erro de configuração, mostrar tela de erro
     if (authError) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
+            <div className="min-h-screen flex items-center justify-center p-6">
                 <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl p-8 max-w-md border border-red-500/30 shadow-2xl shadow-red-500/10 animate-scale-in">
                     <div className="w-14 h-14 rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
                         <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -160,7 +160,7 @@ VITE_SUPABASE_ANON_KEY=eyJh...`}
     // Se não estiver autenticado, mostrar tela de login
     if (authLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center animate-fade-in">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center animate-bounce-soft">
                         <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -180,7 +180,7 @@ VITE_SUPABASE_ANON_KEY=eyJh...`}
     // Se há erro nos dados, mostrar tela de erro
     if (dataError) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
+            <div className="min-h-screen flex items-center justify-center p-6">
                 <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl p-8 max-w-md border border-red-500/30 shadow-2xl shadow-red-500/10 animate-scale-in">
                     <div className="w-14 h-14 rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
                         <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -206,7 +206,7 @@ VITE_SUPABASE_ANON_KEY=eyJh...`}
     // Se dados estão carregando, mostrar loading
     if (dataLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 font-sans text-slate-100 p-6">
+            <div className="min-h-screen font-sans text-slate-100 p-6">
                 <div className="max-w-2xl mx-auto pb-16 pt-12">
                     <main className="mt-8 space-y-6 animate-fade-in">
                         <div className="text-center mb-10">
@@ -256,7 +256,7 @@ VITE_SUPABASE_ANON_KEY=eyJh...`}
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 font-sans text-slate-100">
+        <div className="min-h-screen font-sans text-slate-100">
             <div className="max-w-2xl mx-auto pb-16 px-5 pt-12">
                 <main className="animate-fade-in">
                     {renderView()}

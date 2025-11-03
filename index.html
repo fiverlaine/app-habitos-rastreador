@@ -76,16 +76,22 @@
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            background: linear-gradient(to bottom right, #020617 0%, #0f172a 50%, #020617 100%);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
         }
-        
-        /* Smooth scroll */
+
         html {
+            background: linear-gradient(to bottom right, #020617 0%, #0f172a 50%, #020617 100%);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
             scroll-behavior: smooth;
         }
 
         /* Safe area para evitar conflito com status bar do celular */
         body {
             padding-top: env(safe-area-inset-top, 0px);
+            /* Background já aplicado acima para cobrir toda a tela */
         }
         
         /* Custom scrollbar - fino e elegante */
